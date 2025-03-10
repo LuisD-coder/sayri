@@ -17,7 +17,8 @@
                     <td>{{ grupo.nombre }}</td>
                     <td>
                         <a href="{{ url_for('grupos.asignar_clientes', grupo_id=grupo.id) }}">Asignar Clientes</a>
-                        <a href="{{ url_for('prestamos_grupales.lista_prestamos_grupales') }}">Ver Prestamos</a>
+                        <a href="{{ url_for('prestamos_grupales.prestamos_por_grupo', grupo_id=grupo.id) }}">Ver préstamos</a>
+
                     </td>
                 </tr>
             {% endfor %}

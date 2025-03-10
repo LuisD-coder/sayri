@@ -101,3 +101,16 @@ def prestamos_individuales(prestamo_grupal_id):
     return render_template('prestamos_grupales/prestamos_individuales.html', 
                            prestamo_grupal=prestamo_grupal, 
                            prestamos_individuales=prestamos_individuales)
+
+
+@prestamos_grupales_bp.route('/grupo/<int:grupo_id>/prestamos')
+def prestamos_por_grupo(grupo_id):
+    # Filtrar los préstamos grupales por el grupo seleccionado
+    prestamos_grupales = PrestamoGrupal.query.filter_by(grupo_id=grupo_id).all()
+    
+    # Obtener el grupo para mostrar su información en la plantilla
+    grupo = Grupo.query.get_or_404(grupo_id)
+
+    return render_template('prestamos_grupales/lista_prestamos_grupales.html', 
+                           prestamos_grupales=prestamos_grupales, 
+                           grupo=grupo)
