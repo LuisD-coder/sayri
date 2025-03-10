@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+
+{% block title %}Lista de Grupos{% endblock %}
+
+{% block content %}
+    <main>
+        <h2>Gestión de Pagos</h2>
+        
+        <form method="GET" action="{{ url_for('pagos.lista_pagos') }}">
+            <label for="grupo_id">Seleccionar Grupo:</label>
+            <select name="grupo_id" id="grupo_id" required>
+                <option value="">Selecciona un grupo</option>
+                {% for grupo in grupos %}
+                    <option value="{{ grupo.id }}" {% if grupo.id == selected_grupo_id %}selected{% endif %}>{{ grupo.nombre }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit">Ver Préstamos</button>
+        </form>
+
+        {% if selected_grupo %}
+            <h3>Préstamos del Grupo: {{ selected_grupo.nombre }}</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Cliente</th>
+                        <th>Préstamo</th>
+                        <th>Monto Pendiente</th>
+                        <th>Seleccionar Fecha de Pago</th>
+                        <th>Estado del Pago</th>
+                        <th>Agregar Pago</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for prestamo in prestamos %}
+                        <tr>
+                            <td>{{ prestamo.cliente.nombre }} {{ prestamo.cliente.apellido }}</td>
+                            <td>{{ prestamo.monto }}</td>
+                            <td>{{ prestamo.monto_pendiente }}</td>
+                            <td>
+                                <form action="{{ url_for('pagos.agregar_pago', prestamo_id=prestamo.id) }}" method="POST">
+                                    <label for="fecha_pago_{{ prestamo.id }}">Selecciona Fecha de Pago:</label>
+                                    <select name="fecha_pago" id="fecha_pago_{{ prestamo.id }}" required>
+                                        <option value="">Selecciona una fecha</option>
+                                        {% for fecha in prestamo.fechas_pago_estado %}
+                                            <option value="{{ fecha }}" {% if prestamo.fechas_pago_estado[fecha] == 'Pagado' %}disabled{% endif %}>{{ fecha }} {% if prestamo.fechas_pago_estado[fecha] == 'Pagado' %}(Ya Pagado){% endif %}</option>
+                                        {% endfor %}
+                                    </select>
+                            </td>
+                            <td>
+                                <select name="estado_pago" required>
+                                    <option value="">Seleccionar Estado</option>
+                                    <option value="Pendiente">Pendiente</option>
+                                    <option value="Pagado">Pagado</option>
+                                    <option value="Atrasado">Atrasado</option>
+                                </select>
+                            </td>
+                            <td>
+                                <label for="monto_pago_{{ prestamo.id }}">Monto de Pago:</label>
+                                <input type="number" name="monto_pago" step="0.01" required>
+                                <button type="submit">Añadir Pago</button>
+                            </td>
+                        </form>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        {% endif %}
+    </main>
+{% endblock %}

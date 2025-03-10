@@ -1,6 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for
-from models import db, PrestamoGrupal, Grupo, PrestamoIndividual
-from datetime import datetime
+from models import db, PrestamoGrupal, Grupo, PrestamoIndividual, Pago
+from datetime import datetime, timedelta
+
 
 prestamos_grupales_bp = Blueprint('prestamos_grupales', __name__, url_prefix='/prestamos_grupales')
 
@@ -45,39 +46,54 @@ def lista_prestamos_grupales():
 @prestamos_grupales_bp.route('/<int:prestamo_grupal_id>/asignar_prestamos_individuales', methods=['GET', 'POST'])
 def asignar_prestamos_individuales(prestamo_grupal_id):
     prestamo_grupal = PrestamoGrupal.query.get_or_404(prestamo_grupal_id)
-    clientes = prestamo_grupal.grupo.clientes  # Obtener los clientes del grupo
+    clientes = prestamo_grupal.grupo.clientes  
 
     if request.method == 'POST':
         for cliente_id in request.form.getlist('clientes'):
-            # Verificar si el cliente ya tiene un préstamo individual asignado en este préstamo grupal
-            prestamo_existente = PrestamoIndividual.query.filter_by(prestamo_grupal_id=prestamo_grupal.id, cliente_id=cliente_id).first()
+            prestamo_existente = PrestamoIndividual.query.filter_by(
+                prestamo_grupal_id=prestamo_grupal.id, cliente_id=cliente_id
+            ).first()
             
             if prestamo_existente:
-                print(f"El cliente ID {cliente_id} ya tiene un préstamo asignado en este grupo. No se puede asignar otro préstamo.")
-                continue  # Si ya tiene un préstamo, se omite y no se asigna otro
-            monto = request.form[f'monto_cliente_{cliente_id}']
-            print(f"Guardando préstamo individual para Cliente ID {cliente_id}, Monto: {monto}")  # Mensaje de depuración
-        
+                continue  # Si el préstamo individual ya existe, se salta
+
+            # Validar que el monto ingresado es un número válido
+            try:
+                monto = float(request.form[f'monto_cliente_{cliente_id}'])
+            except ValueError:
+                flash(f"El monto para el cliente {cliente_id} no es válido.")
+                return redirect(url_for('prestamos_grupales.asignar_prestamos_individuales', prestamo_grupal_id=prestamo_grupal_id))
+
+            # Crear el préstamo individual
             nuevo_prestamo_individual = PrestamoIndividual(
                 prestamo_grupal_id=prestamo_grupal.id,
                 cliente_id=cliente_id,
                 monto=monto
             )
             db.session.add(nuevo_prestamo_individual)
+            db.session.commit()  # Commit para obtener el ID del préstamo individual
 
-        # Actualizar monto_total del préstamo grupal solo con los préstamos del grupo actual
-        prestamos_individuales = PrestamoIndividual.query.filter_by(prestamo_grupal_id=prestamo_grupal.id).all()
-        
-        # Asegurarse de que los montos sean números y calcular el monto total
-        monto_total_actualizado = sum(float(prestamo.monto) for prestamo in prestamos_individuales if prestamo.monto)
+            # **Generar 4 pagos iniciando 15 días después de la fecha de desembolso**
+            fecha_pago = prestamo_grupal.fecha_desembolso + timedelta(days=15)  # Primer pago después de 15 días
+            for _ in range(4):
+                nuevo_pago = Pago(
+                    cliente_id=cliente_id,
+                    prestamo_individual_id=nuevo_prestamo_individual.id,  
+                    monto_pendiente=0,
+                    monto_pagado=0,
+                    estado="Pendiente",
+                    fecha_pago=fecha_pago  
+                )
+                db.session.add(nuevo_pago)
 
-        # Actualizar el campo monto_total del préstamo grupal
-        prestamo_grupal.monto_total = monto_total_actualizado
-        
-        # Guardar los cambios en la base de datos
+                # Sumar 15 días para el siguiente pago
+                fecha_pago += timedelta(days=15)
+
+        # Actualizar monto_total del préstamo grupal
+        prestamos_individuales = db.session.query(db.func.sum(PrestamoIndividual.monto)).filter_by(prestamo_grupal_id=prestamo_grupal.id).scalar() or 0
+        prestamo_grupal.monto_total = prestamos_individuales
+
         db.session.commit()
-
-        print("Préstamos individuales guardados y monto_total actualizado.")
         return redirect(url_for('prestamos_grupales.lista_prestamos_grupales'))
 
     return render_template('prestamos_grupales/asignar_prestamos_individuales.html', 

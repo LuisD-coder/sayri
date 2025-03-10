@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Lista de Grupos{% endblock %}
+
+{% block content %}
+
+   <main>
+        <h2>Lista de Pagos</h2>
+
+        <form method="GET" action="{{ url_for('pagos.lista_pagos') }}">
+            <label for="grupo_id">Seleccionar Grupo:</label>
+            <select name="grupo_id" id="grupo_id" required>
+                <option value="">Selecciona un grupo</option>
+                {% for grupo in grupos %}
+                    <option value="{{ grupo.id }}" {% if grupo.id == selected_grupo_id %}selected{% endif %}>{{ grupo.nombre }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit">Ver Préstamos</button>
+        </form>
+
+        <!-- Mostrar los pagos de los clientes -->
+        <table>
+            <thead>
+                <tr>
+                    <th>Cliente</th>
+                    <th>Prestamo</th>
+                    <th>Monto Pendiente</th>
+                    <th>Monto Pagado</th>
+                    <th>Estado</th>
+                    <th>Fecha de Pago</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pago in pagos %}
+                <tr>
+                    <td>{{ pago.cliente.nombre }} {{ pago.cliente.apellido }}</td>
+                    <td>Préstamo #{{ pago.prestamo_individual.id }}</td>
+                    <td>{{ pago.monto_pendiente }}</td>
+                    <td>{{ pago.monto_pagado }}</td>
+                    <td>{{ pago.estado }}</td>
+                    <td>{{ pago.fecha_pago }}</td>
+                    <td>
+                        <form action="{{ url_for('pagos.agregar_pago', pago_id=pago.id) }}" method="post">
+                            <button type="submit">Añadir Pago</button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </main>
+
+{% endblock %}

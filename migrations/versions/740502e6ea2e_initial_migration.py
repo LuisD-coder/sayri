@@ -1,8 +1,8 @@
-"""actualzacion
+"""Initial migration
 
-Revision ID: ac11d977349c
+Revision ID: 740502e6ea2e
 Revises: 
-Create Date: 2025-03-09 20:28:37.001376
+Create Date: 2025-03-10 12:13:29.763373
 
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision = 'ac11d977349c'
+revision = '740502e6ea2e'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -58,10 +58,13 @@ def upgrade():
     )
     op.create_table('pago',
     sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('cliente_id', sa.Integer(), nullable=False),
     sa.Column('prestamo_individual_id', sa.Integer(), nullable=False),
-    sa.Column('fecha_pago', sa.DateTime(), nullable=True),
-    sa.Column('monto_pagado', sa.Float(), nullable=False),
+    sa.Column('monto_pendiente', sa.Numeric(precision=10, scale=2), nullable=True),
+    sa.Column('monto_pagado', sa.Numeric(precision=10, scale=2), nullable=True),
     sa.Column('estado', sa.String(length=20), nullable=True),
+    sa.Column('fecha_pago', sa.Date(), nullable=False),
+    sa.ForeignKeyConstraint(['cliente_id'], ['cliente.id'], ),
     sa.ForeignKeyConstraint(['prestamo_individual_id'], ['prestamoindividual.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
