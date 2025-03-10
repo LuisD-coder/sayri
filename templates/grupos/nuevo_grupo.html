@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block title %}Nuevo Grupo{% endblock %}
+
+{% block content %}
+    <h2>Nuevo Grupo</h2>
+    <form action="{{ url_for('grupos.nuevo_grupo') }}" method="POST">
+        <label for="nombre">Nombre del Grupo:</label>
+        <input type="text" id="nombre" name="nombre" required>
+        <button type="submit">Crear Grupo</button>
+    </form>
+{% endblock %}

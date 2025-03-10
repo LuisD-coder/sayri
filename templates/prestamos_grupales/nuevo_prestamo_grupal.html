@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block title %}Nuevo Préstamo Grupal{% endblock %}
+
+{% block content %}
+    <h2>Nuevo Préstamo Grupal</h2>
+    <form action="{{ url_for('prestamos_grupales.nuevo_prestamo_grupal') }}" method="POST">
+        <label for="grupo_id">Seleccionar Grupo:</label>
+        <select name="grupo_id" required>
+            {% for grupo in grupos %}
+                <option value="{{ grupo.id }}">{{ grupo.nombre }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="fecha_desembolso">Fecha de Desembolso:</label>
+        <input type="date" name="fecha_desembolso" required>
+
+        <button type="submit">Crear Préstamo Grupal</button>
+    </form>
+{% endblock %}

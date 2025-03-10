@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Préstamos Individuales{% endblock %}
+
+{% block content %}
+    <h2>Préstamos Individuales del Grupo {{ prestamo_grupal.grupo.nombre }}</h2>
+    
+    {% if prestamos_individuales %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Cliente</th>
+                    <th>Monto</th>
+                    <th>Fecha de Desembolso</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for prestamo in prestamos_individuales %}
+                    <tr>
+                        <td>{{ prestamo.cliente.nombre }} {{ prestamo.cliente.apellido }}</td>
+                        <td>{{ prestamo.monto }}</td>
+                        <td>{{ prestamo.fecha_desembolso }}</td>
+                        <td>{{ prestamo.estado }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>No hay préstamos individuales para este grupo.</p>
+    {% endif %}
+{% endblock %}

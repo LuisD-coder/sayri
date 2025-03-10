@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Lista de Clientes{% endblock %}
+
+{% block content %}
+    <h2>Lista de Clientes</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Apellido</th>
+                <th>DNI</th>
+                <th>Grupo</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for cliente in clientes %}
+                <tr>
+                    <td>{{ cliente.nombre }}</td>
+                    <td>{{ cliente.apellido }}</td>
+                    <td>{{ cliente.dni }}</td>
+                    <td>{{ cliente.grupo.nombre if cliente.grupo else 'Sin Grupo' }}</td>
+                    <td>
+                        <a href="{{ url_for('clientes.detalle_cliente', cliente_id=cliente.id) }}">Ver Detalles</a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

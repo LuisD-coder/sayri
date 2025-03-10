@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+
+{% block title %}Detalles del Cliente{% endblock %}
+
+{% block content %}
+    <h2>Detalles del Cliente</h2>
+
+    <div>
+        <p><strong>Nombre:</strong> {{ cliente.nombre }} {{ cliente.apellido }}</p>
+        <p><strong>DNI:</strong> {{ cliente.dni }}</p>
+        <p><strong>Celular:</strong> {{ cliente.celular }}</p>
+        <p><strong>Operadora:</strong> {{ cliente.operadora }}</p>
+        <p><strong>Banco:</strong> {{ cliente.banco }}</p>
+        <p><strong>Número de Cuenta:</strong> {{ cliente.numero_cuenta }}</p>
+        <p><strong>Fecha de Registro:</strong> {{ cliente.fecha_registro }}</p>
+
+        <h3>Préstamos del Cliente:</h3>
+        <ul>
+            {% for prestamo in cliente.prestamos %}
+                <li>
+                    <p><strong>Prestamo ID:</strong> {{ prestamo.id }}</p>
+                    <p><strong>Monto:</strong> S/{{ prestamo.monto }}</p>
+                    <p><strong>Fecha de Desembolso:</strong> {{ prestamo.fecha_desembolso }}</p>
+                    <p><strong>Estado:</strong> {{ prestamo.estado }}</p>
+                </li>
+            {% endfor %}
+        </ul>
+
+        <a href="{{ url_for('clientes.lista_clientes') }}">Volver a la lista de clientes</a>
+    </div>
+{% endblock %}

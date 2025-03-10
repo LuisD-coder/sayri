@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Asignar Clientes al Grupo{% endblock %}
+
+{% block content %}
+    <h2>Asignar Clientes a: {{ grupo.nombre }}</h2>
+    <form action="{{ url_for('grupos.asignar_clientes', grupo_id=grupo.id) }}" method="POST">
+        <h3>Seleccionar Clientes:</h3>
+        {% for cliente in clientes %}
+            <div>
+                <input type="checkbox" name="clientes" value="{{ cliente.id }}" id="cliente_{{ cliente.id }}">
+                <label for="cliente_{{ cliente.id }}">{{ cliente.nombre }} {{ cliente.apellido }}</label>
+            </div>
+        {% endfor %}
+        <button type="submit">Asignar Clientes</button>
+    </form>
+{% endblock %}

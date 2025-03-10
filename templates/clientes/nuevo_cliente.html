@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Nuevo Cliente{% endblock %}
+
+{% block content %}
+    <h2>Nuevo Cliente</h2>
+    <form action="{{ url_for('clientes.nuevo_cliente') }}" method="POST">
+        <label for="nombre">Nombre:</label>
+        <input type="text" id="nombre" name="nombre" required>
+
+        <label for="apellido">Apellido:</label>
+        <input type="text" id="apellido" name="apellido" required>
+
+        <label for="dni">DNI:</label>
+        <input type="text" id="dni" name="dni" required>
+
+        <label for="celular">Celular:</label>
+        <input type="text" id="celular" name="celular" required>
+
+        <label for="operadora">Operadora:</label>
+        <select id="operadora" name="operadora" required>
+            <option value="Claro">Claro</option>
+            <option value="Movistar">Movistar</option>
+            <option value="Entel">Entel</option>
+            <option value="Bitel">Bitel</option>
+        </select>
+
+        <label for="banco">Banco:</label>
+        <select id="banco" name="banco" required>
+            <option value="BN">BN</option>
+            <option value="BCP">BCP</option>
+            <option value="INTERBANK">INTERBANK</option>
+            <option value="BBVA">BBVA</option>
+            <option value="SCOTIABANK">SCOTIABANK</option>
+        </select>
+
+        <label for="numero_cuenta">Número de Cuenta:</label>
+        <input type="text" id="numero_cuenta" name="numero_cuenta" required>
+
+        <label for="grupo_id">Seleccionar Grupo:</label>
+        <select name="grupo_id" required>
+            {% for grupo in grupos %}
+                <option value="{{ grupo.id }}">{{ grupo.nombre }}</option>
+            {% endfor %}
+        </select>
+
+        <button type="submit">Crear Cliente</button>
+    </form>
+{% endblock %}

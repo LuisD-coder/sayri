@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Lista de Préstamos Grupales{% endblock %}
+
+{% block content %}
+    <h2>Lista de Préstamos Grupales</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Grupo</th>
+                <th>Monto Total</th>
+                <th>Fecha de Desembolso</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for prestamo in prestamos_grupales %}
+                <tr>
+                    <td>{{ prestamo.grupo.nombre }}</td>
+                    <td>{{ prestamo.monto_total }}</td>
+                    <td>{{ prestamo.fecha_desembolso }}</td>
+                    <td>
+                        <!-- Enlace para ver los préstamos individuales -->
+                        <a href="{{ url_for('prestamos_grupales.prestamos_individuales', prestamo_grupal_id=prestamo.id) }}">Ver Préstamos Individuales</a> |
+                        <!-- Enlace para asignar nuevos préstamos individuales -->
+                        <a href="{{ url_for('prestamos_grupales.asignar_prestamos_individuales', prestamo_grupal_id=prestamo.id) }}">Asignar Préstamos Individuales</a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}
