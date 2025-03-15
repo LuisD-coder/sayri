@@ -7,36 +7,26 @@ from decimal import Decimal
 # Crear un Blueprint para la gestión de pagos
 pagos_bp = Blueprint('pagos', __name__)
 
-@pagos_bp.route('/pagos', methods=['GET', 'POST'])
+@pagos_bp.route('/pagos', methods=['GET'])
 def lista_pagos():
-    grupos = Grupo.query.all()  # Obtener todos los grupos disponibles
-    selected_grupo_id = None
-    prestamos = []
+    grupos = Grupo.query.all()
+    grupo_id = request.args.get('grupo_id')
 
-    if request.method == 'GET' and request.args.get('grupo_id'):
-        selected_grupo_id = int(request.args.get('grupo_id'))
-        grupo = Grupo.query.get_or_404(selected_grupo_id)
-        
-        # Filtrar los préstamos del grupo seleccionado
-        prestamos = PrestamoIndividual.query.filter_by(prestamo_grupal_id=grupo.id).all()
+    selected_grupo = None
+    prestamos_grupales = []
 
-        # Agregar las fechas de pago y su estado
-        for prestamo in prestamos:
-            prestamo.fechas_pago_estado = {}
-            pagos = Pago.query.filter_by(prestamo_individual_id=prestamo.id).all()
+    if grupo_id:
+        selected_grupo = Grupo.query.get(grupo_id)
+        if selected_grupo:
+            prestamos_grupales = PrestamoGrupal.query.filter_by(grupo_id=selected_grupo.id).all()
 
-            for pago in pagos:
-                # Verificar si el pago está pendiente y la fecha ya pasó
-                if pago.estado == "Pendiente" and pago.fecha_pago < date.today():
-                    pago.estado = "Atrasado"
+    return render_template(
+        'pagos/pagos.html',
+        grupos=grupos,
+        selected_grupo=selected_grupo,
+        prestamos_grupales=prestamos_grupales
+    )
 
-                prestamo.fechas_pago_estado[pago.fecha_pago] = pago.estado
-
-        db.session.commit()  # Guardar cambios en la base de datos si se actualizó algún pago
-
-        return render_template('pagos/pagos.html', grupos=grupos, selected_grupo=grupo, prestamos=prestamos)
-
-    return render_template('pagos/pagos.html', grupos=grupos, selected_grupo_id=selected_grupo_id, prestamos=prestamos)
 
 
 

@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for
+from flask import Blueprint, render_template, request, redirect, url_for, flash
 from models import db, PrestamoGrupal, Grupo, PrestamoIndividual, Pago
 from datetime import datetime, timedelta
 
@@ -6,34 +6,36 @@ from datetime import datetime, timedelta
 prestamos_grupales_bp = Blueprint('prestamos_grupales', __name__, url_prefix='/prestamos_grupales')
 
 # Crear un nuevo préstamo grupal
-# Crear un nuevo préstamo grupal
 @prestamos_grupales_bp.route('/nuevo', methods=['GET', 'POST'])
 def nuevo_prestamo_grupal():
     if request.method == 'POST':
         grupo_id = request.form['grupo_id']
         fecha_desembolso_str = request.form['fecha_desembolso']
 
-        # Convierte la fecha de string a un objeto datetime
+        # Convierte la fecha de string a un objeto datetime.date
         fecha_desembolso = datetime.strptime(fecha_desembolso_str, '%Y-%m-%d').date()
 
-        # Recupera el grupo seleccionado
-        grupo = Grupo.query.get(grupo_id)
+        # Verifica si el grupo existe
+        grupo = Grupo.query.get_or_404(grupo_id)
 
-        # Calcula el monto total sumando los préstamos individuales de los clientes solo para este grupo
-        monto_total = sum(prestamo.monto for prestamo in PrestamoIndividual.query
-                          .filter(PrestamoIndividual.prestamo_grupal_id == grupo_id).all())  # Aquí cambiamos de grupo_id a prestamo_grupal_id
-
-        # Crea el préstamo grupal con el monto total calculado
-        nuevo_prestamo_grupal = PrestamoGrupal(grupo_id=grupo_id, monto_total=monto_total, fecha_desembolso=fecha_desembolso)
+        # ✅ Establecer monto_total en 0 al crear el préstamo grupal
+        nuevo_prestamo_grupal = PrestamoGrupal(
+            grupo_id=grupo_id,
+            monto_total=0,  # Se inicia en 0 y se actualizará después al asignar préstamos individuales
+            fecha_desembolso=fecha_desembolso
+        )
 
         # Guarda el nuevo préstamo grupal en la base de datos
         db.session.add(nuevo_prestamo_grupal)
         db.session.commit()
 
+        flash("Préstamo grupal creado exitosamente.", "success")
         return redirect(url_for('prestamos_grupales.lista_prestamos_grupales'))
-    
+
+    # Obtener todos los grupos para mostrar en la plantilla
     grupos = Grupo.query.all()
     return render_template('prestamos_grupales/nuevo_prestamo_grupal.html', grupos=grupos)
+
 
 
 # Listar todos los préstamos grupales

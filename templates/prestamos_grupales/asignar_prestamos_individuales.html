@@ -4,15 +4,19 @@
 
 {% block content %}
     <h2>Asignar Préstamos Individuales para el Grupo: {{ prestamo_grupal.grupo.nombre }}</h2>
+
+    {% for cliente in clientes %}
+    <h3>{{ cliente.nombre }} {{ cliente.apellido }}</h3>
     <form method="POST">
-        <h3>Clientes:</h3>
-        {% for cliente in clientes %}
-            <div>
-                <label for="monto_cliente_{{ cliente.id }}">{{ cliente.nombre }} {{ cliente.apellido }}:</label>
-                <input type="number" name="monto_cliente_{{ cliente.id }}" step="0.01" required>
-                <input type="checkbox" name="clientes" value="{{ cliente.id }}" id="cliente_{{ cliente.id }}">
-            </div>
-        {% endfor %}
-        <button type="submit">Asignar Préstamos</button>
+        <div>
+            <label for="monto_cliente_{{ cliente.id }}">Monto de Préstamo:</label>
+            <input type="number" name="monto_cliente_{{ cliente.id }}" step="0.01" required>
+        </div>
+        <div>
+            <input type="checkbox" name="clientes" value="{{ cliente.id }}" id="cliente_{{ cliente.id }}">
+            <label for="cliente_{{ cliente.id }}">Seleccionar cliente</label>
+        </div>
+        <button type="submit">Asignar Préstamo</button>
     </form>
+{% endfor %}
 {% endblock %}
