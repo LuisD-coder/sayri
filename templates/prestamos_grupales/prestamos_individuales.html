@@ -3,30 +3,34 @@
 {% block title %}Préstamos Individuales{% endblock %}
 
 {% block content %}
-    <h2>Préstamos Individuales del Grupo {{ prestamo_grupal.grupo.nombre }}</h2>
+<div class="container">
+    <h2 class="text-center my-4">Préstamos Individuales del Grupo {{ prestamo_grupal.grupo.nombre }}</h2>
     
     {% if prestamos_individuales %}
-        <table>
-            <thead>
-                <tr>
-                    <th>Cliente</th>
-                    <th>Monto</th>
-                    <th>Fecha de Desembolso</th>
-                    <th>Estado</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for prestamo in prestamos_individuales %}
+        <div class="table-responsive">
+            <table class="table table-dark table-hover table-bordered">
+                <thead class="table-primary text-dark">
                     <tr>
-                        <td>{{ prestamo.cliente.nombre }} {{ prestamo.cliente.apellido }}</td>
-                        <td>{{ prestamo.monto }}</td>
-                        <td>{{ prestamo.fecha_desembolso }}</td>
-                        <td>{{ prestamo.estado }}</td>
+                        <th>Cliente</th>
+                        <th>Monto</th>
+                        <th>Fecha de Desembolso</th>
+                        <th>Estado</th>
                     </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    {% for prestamo in prestamos_individuales %}
+                        <tr>
+                            <td>{{ prestamo.cliente.nombre }} {{ prestamo.cliente.apellido }}</td>
+                            <td>S/ {{ prestamo.monto }}</td>
+                            <td>{{ prestamo.fecha_desembolso }}</td>
+                            <td>{{ prestamo.estado }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     {% else %}
-        <p>No hay préstamos individuales para este grupo.</p>
+        <p class="text-center">No hay préstamos individuales para este grupo.</p>
     {% endif %}
+</div>
 {% endblock %}
