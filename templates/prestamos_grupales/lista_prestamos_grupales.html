@@ -3,30 +3,49 @@
 {% block title %}Lista de Préstamos Grupales{% endblock %}
 
 {% block content %}
-    <h2>Lista de Préstamos Grupales</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>Grupo</th>
-                <th>Monto Total</th>
-                <th>Fecha de Desembolso</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for prestamo in prestamos_grupales %}
+<div class="container">
+    <h2 class="text-center my-4">Lista de Préstamos Grupales</h2>
+
+    <div class="table-responsive">
+        <table class="table table-dark table-hover table-bordered">
+            <thead class="table-primary text-dark">
                 <tr>
-                    <td>{{ prestamo.grupo.nombre }}</td>
-                    <td>{{ prestamo.monto_total }}</td>
-                    <td>{{ prestamo.fecha_desembolso }}</td>
-                    <td>
-                        <!-- Enlace para ver los préstamos individuales -->
-                        <a href="{{ url_for('prestamos_grupales.prestamos_individuales', prestamo_grupal_id=prestamo.id) }}">Ver Préstamos Individuales</a> |
-                        <!-- Enlace para asignar nuevos préstamos individuales -->
-                        <a href="{{ url_for('prestamos_grupales.asignar_prestamos_individuales', prestamo_grupal_id=prestamo.id) }}">Asignar Préstamos Individuales</a>
-                    </td>
+                    <th>
+                        <a href="{{ url_for('prestamos_grupales.lista_prestamos_grupales', orden='grupo') }}" class="text-dark text-decoration-none">
+                            Grupo <i class="bi bi-arrow-down-up"></i>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="{{ url_for('prestamos_grupales.lista_prestamos_grupales', orden='monto') }}" class="text-dark text-decoration-none">
+                            Monto Total (S/) <i class="bi bi-arrow-down-up"></i>
+                        </a>
+                    </th>
+                    <th>
+                        <a href="{{ url_for('prestamos_grupales.lista_prestamos_grupales', orden='fecha') }}" class="text-dark text-decoration-none">
+                            Fecha de Desembolso <i class="bi bi-arrow-down-up"></i>
+                        </a>
+                    </th>
+                    <th>Acciones</th>
                 </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+            </thead>
+            <tbody>
+                {% for prestamo in prestamos_grupales %}
+                    <tr>
+                        <td>{{ prestamo.grupo.nombre }}</td>
+                        <td>S/ {{ prestamo.monto_total }}</td>
+                        <td>{{ prestamo.fecha_desembolso }}</td>
+                        <td>
+                            <a href="{{ url_for('prestamos_grupales.prestamos_individuales', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-primary">
+                                <i class="bi bi-eye"></i> Ver P.I.
+                            </a>
+                            <a href="{{ url_for('prestamos_grupales.asignar_prestamos_individuales', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-success">
+                                <i class="bi bi-plus-circle"></i> Asignar P.I.
+                            </a>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 {% endblock %}

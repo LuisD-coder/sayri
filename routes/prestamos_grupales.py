@@ -38,11 +38,28 @@ def nuevo_prestamo_grupal():
 
 
 
-# Listar todos los préstamos grupales
 @prestamos_grupales_bp.route('/')
 def lista_prestamos_grupales():
-    prestamos_grupales = PrestamoGrupal.query.all()
+    # Obtener el criterio de ordenamiento desde la URL, por defecto ordena por fecha
+    orden = request.args.get('orden', 'fecha')
+
+    # Diccionario para mapear los criterios de ordenamiento válidos
+    opciones_orden = {
+        'grupo': PrestamoGrupal.grupo_id,
+        'monto': PrestamoGrupal.monto_total,
+        'fecha': PrestamoGrupal.fecha_desembolso
+    }
+
+    # Validar si el criterio de ordenamiento es válido, si no, usar la fecha
+    orden_columna = opciones_orden.get(orden, PrestamoGrupal.fecha_desembolso)
+
+    # Obtener los préstamos ordenados según el criterio seleccionado
+    prestamos_grupales = PrestamoGrupal.query.order_by(orden_columna).all()
+
     return render_template('prestamos_grupales/lista_prestamos_grupales.html', prestamos_grupales=prestamos_grupales)
+
+
+
 
 # Asignar préstamos individuales a los clientes dentro de un préstamo grupal
 @prestamos_grupales_bp.route('/<int:prestamo_grupal_id>/asignar_prestamos_individuales', methods=['GET', 'POST'])
@@ -132,3 +149,4 @@ def prestamos_por_grupo(grupo_id):
     return render_template('prestamos_grupales/lista_prestamos_grupales.html', 
                            prestamos_grupales=prestamos_grupales, 
                            grupo=grupo)
+
