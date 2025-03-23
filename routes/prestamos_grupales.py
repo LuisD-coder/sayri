@@ -1,6 +1,12 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
-from models import db, PrestamoGrupal, Grupo, PrestamoIndividual, Pago
+from models import db, PrestamoGrupal, Grupo, PrestamoIndividual, Pago, Cliente, Contrato
 from datetime import datetime, timedelta
+import fitz
+import os
+from io import BytesIO
+import io
+from flask import send_file
+
 
 
 prestamos_grupales_bp = Blueprint('prestamos_grupales', __name__, url_prefix='/prestamos_grupales')
@@ -150,3 +156,125 @@ def prestamos_por_grupo(grupo_id):
                            prestamos_grupales=prestamos_grupales, 
                            grupo=grupo)
 
+
+@prestamos_grupales_bp.route('/descargar_contrato/<int:contrato_id>')
+def descargar_contrato(contrato_id):
+    contrato = Contrato.query.get_or_404(contrato_id)
+    
+    # Crear un archivo en memoria desde el contenido binario
+    archivo = BytesIO(contrato.archivo)
+    archivo.seek(0)  # Asegurarse de que el puntero esté al principio del archivo
+
+    # Enviar el archivo como respuesta
+    return send_file(archivo, as_attachment=True, download_name=contrato.nombre_archivo, mimetype='application/pdf')
+
+
+
+# Ruta para generar contrato
+@prestamos_grupales_bp.route('/generar_contrato/<int:prestamo_grupal_id>', methods=['GET'])
+def generar_contrato(prestamo_grupal_id):
+    # Obtener el préstamo grupal por su ID
+    prestamo_grupal = PrestamoGrupal.query.get_or_404(prestamo_grupal_id)
+
+    # Obtener los clientes asociados a ese préstamo grupal
+    clientes_asociados = PrestamoIndividual.query.filter_by(prestamo_grupal_id=prestamo_grupal.id).all()
+
+    # Si no hay clientes asociados, mostrar un error
+    if not clientes_asociados:
+        flash('No se encontraron clientes asociados a este préstamo grupal.', 'error')
+        return redirect(url_for('prestamos_grupales.lista_prestamos_grupales'))
+
+    # Aquí podemos proceder a generar el contrato para cada cliente
+    for prestamo_individual in clientes_asociados:
+        cliente = Cliente.query.get(prestamo_individual.cliente_id)
+        
+        # Generar el contrato específico para el cliente
+        contrato_generado = generar_contrato_logic(cliente.id, prestamo_grupal)
+
+    # Retornar el archivo generado (o redirigir a una página donde el usuario pueda descargarlo)
+    return redirect(url_for('prestamos_grupales.lista_prestamos_grupales'))
+
+
+
+
+def generar_contrato_logic(cliente_id, prestamo_grupal):
+    # Obtener el cliente por su ID
+    cliente = Cliente.query.get_or_404(cliente_id)
+
+    # Obtener el monto del préstamo individual asignado a este cliente
+    monto_cliente = None
+    for prestamo_individual in prestamo_grupal.prestamos_individuales:
+        if prestamo_individual.cliente_id == cliente.id:
+            monto_cliente = prestamo_individual.monto
+            break
+
+    if monto_cliente is None:
+        raise ValueError(f"No se encontró el monto de préstamo para el cliente {cliente.nombre} {cliente.apellido}.")
+
+    # Redondear el monto del préstamo para evitar decimales en el nombre del archivo
+    monto_cliente = round(monto_cliente)
+
+    contrato_path = f"static/contrato_preformateado{monto_cliente}.pdf"
+    
+    if not os.path.exists(contrato_path):
+        raise FileNotFoundError(f"No se encontró el archivo de contrato preformateado para el monto {monto_cliente}.")
+    
+    doc = fitz.open(contrato_path)
+
+    # Obtener las primeras 4 fechas de pago del cliente, si existen
+    pagos = Pago.query.filter_by(cliente_id=cliente.id).order_by(Pago.fecha_pago).limit(4).all()
+    fechas_pago = [pago.fecha_pago.strftime('%d/%m/%Y') for pago in pagos]
+
+    # Asegurarse de que haya 4 fechas, rellenando con "N/A" si es necesario
+    while len(fechas_pago) < 4:
+        fechas_pago.append("N/A")
+
+    # Definir los datos a reemplazar
+    datos_cliente = {
+        "NOMBRE": cliente.nombre.upper(),
+        "APELLIDO": cliente.apellido.upper(),
+        "DNI":cliente.dni,
+        "PRESTAMO": f"{monto_cliente} soles",
+        "FECHA_DSB": prestamo_grupal.fecha_desembolso.strftime('%d/%m/%Y'),
+        "FECHA_1": fechas_pago[0],  # Primer fecha de pago
+        "FECHA_2": fechas_pago[1],  # Segunda fecha de pago
+        "FECHA_3": fechas_pago[2],  # Tercera fecha de pago
+        "FECHA_4": fechas_pago[3]   # Cuarta fecha de pago
+    }
+
+    # Reemplazar los marcadores de texto
+    for page in doc:
+        text_instances = []
+        for tag, value in datos_cliente.items():
+            placeholder = f"{{{{{tag}}}}}"
+            for inst in page.search_for(placeholder):
+                text_instances.append((inst, value))
+        
+        for rect, value in text_instances:
+            x, y, width, height = rect.x0, rect.y0, rect.width, rect.height
+            
+            # Cubrir el texto original con un rectángulo blanco
+            page.draw_rect(rect, color=(1, 1, 1), fill=(1, 1, 1))
+            
+            # Escribir el nuevo texto en la misma posición
+            page.insert_text((x, y + height * 0.8), value, fontsize=10, color=(0, 0, 0))
+
+    # Guardar el contrato modificado en un buffer en lugar de en un archivo
+    buffer = io.BytesIO()
+    doc.save(buffer)
+    buffer.seek(0)
+
+    # Crear una nueva instancia de Contrato y guardar el contrato en la base de datos
+    nombre_archivo = f"contrato_{cliente.nombre.upper()}_{cliente.apellido.upper()}_{monto_cliente}.pdf"
+    
+    nuevo_contrato = Contrato(
+        nombre_archivo=nombre_archivo,
+        archivo=buffer.getvalue(),
+        cliente_id=cliente.id
+    )
+    
+    db.session.add(nuevo_contrato)
+    db.session.commit()
+
+    # Retornar el archivo generado para que el usuario lo descargue
+    return send_file(buffer, as_attachment=True, download_name=nombre_archivo, mimetype='application/pdf')

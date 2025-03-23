@@ -3,12 +3,12 @@
 {% block title %}Lista de Préstamos Grupales{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h2 class="text-center my-4">Lista de Préstamos Grupales</h2>
+<div class="container" style="background-color: #f4f4f9; padding: 20px; border-radius: 8px;">
+    <h2 class="text-center my-4 text-dark">Lista de Préstamos Grupales</h2>
 
     <div class="table-responsive">
         <table class="table table-dark table-hover table-bordered">
-            <thead class="table-primary text-dark">
+            <thead class="table-secondary text-dark">
                 <tr>
                     <th>
                         <a href="{{ url_for('prestamos_grupales.lista_prestamos_grupales', orden='grupo') }}" class="text-dark text-decoration-none">
@@ -35,11 +35,14 @@
                         <td>S/ {{ prestamo.monto_total }}</td>
                         <td>{{ prestamo.fecha_desembolso }}</td>
                         <td>
-                            <a href="{{ url_for('prestamos_grupales.prestamos_individuales', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-primary">
+                            <a href="{{ url_for('prestamos_grupales.prestamos_individuales', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-primary" data-bs-toggle="tooltip" title="Ver Préstamos Individuales">
                                 <i class="bi bi-eye"></i> Ver P.I.
                             </a>
-                            <a href="{{ url_for('prestamos_grupales.asignar_prestamos_individuales', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-success">
+                            <a href="{{ url_for('prestamos_grupales.asignar_prestamos_individuales', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-success" data-bs-toggle="tooltip" title="Asignar Préstamos Individuales">
                                 <i class="bi bi-plus-circle"></i> Asignar P.I.
+                            </a>
+                            <a href="{{ url_for('prestamos_grupales.generar_contrato', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-warning" data-bs-toggle="tooltip" title="Generar Contrato">
+                                <i class="bi bi-file-earmark-pdf"></i> Generar Contrato
                             </a>
                         </td>
                     </tr>
@@ -48,4 +51,12 @@
         </table>
     </div>
 </div>
+
+<!-- Añadir este script para los tooltips -->
+<script>
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+</script>
 {% endblock %}
