@@ -26,8 +26,9 @@
                             <td>{{ prestamo.fecha_desembolso }}</td>
                             <td>{{ prestamo.estado }}</td>
                             <td>
-                                {% if prestamo.cliente.contratos %}
-                                    <a href="{{ url_for('prestamos_grupales.descargar_contrato', contrato_id=prestamo.cliente.contratos[0].id) }}" class="btn btn-success">Descargar Contrato</a>
+                                {% set contrato = prestamo.cliente.contratos | selectattr('prestamo_individual_id', 'equalto', prestamo.id) | first %}
+                                {% if contrato %}
+                                    <a href="{{ url_for('prestamos_grupales.descargar_contrato', contrato_id=contrato.id) }}" class="btn btn-success">Descargar Contrato</a>
                                 {% else %}
                                     <span class="text-muted">Contrato no disponible</span>
                                 {% endif %}

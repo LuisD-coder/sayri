@@ -6,6 +6,7 @@ import os
 from io import BytesIO
 import io
 from flask import send_file
+from sqlalchemy import asc, desc
 
 
 
@@ -44,24 +45,33 @@ def nuevo_prestamo_grupal():
 
 
 
-@prestamos_grupales_bp.route('/')
+@prestamos_grupales_bp.route('/', methods=['GET'])
 def lista_prestamos_grupales():
-    # Obtener el criterio de ordenamiento desde la URL, por defecto ordena por fecha
-    orden = request.args.get('orden', 'fecha')
+    # Obtener el valor de la columna de orden (por defecto 'grupo')
+    orden_columna = request.args.get('orden', 'grupo')
 
-    # Diccionario para mapear los criterios de ordenamiento válidos
-    opciones_orden = {
+    # Mapea las columnas válidas para ordenación
+    columnas_validas = {
         'grupo': PrestamoGrupal.grupo_id,
         'monto': PrestamoGrupal.monto_total,
         'fecha': PrestamoGrupal.fecha_desembolso
     }
 
-    # Validar si el criterio de ordenamiento es válido, si no, usar la fecha
-    orden_columna = opciones_orden.get(orden, PrestamoGrupal.fecha_desembolso)
+    # Asegúrate de que 'orden_columna' sea una columna válida
+    if orden_columna in columnas_validas:
+        orden_columna = columnas_validas[orden_columna]
+    else:
+        orden_columna = PrestamoGrupal.grupo_id  # Valor por defecto
 
-    # Obtener los préstamos ordenados según el criterio seleccionado
-    prestamos_grupales = PrestamoGrupal.query.order_by(orden_columna).all()
+    # Realiza la consulta ordenada
+    try:
+        prestamos_grupales = PrestamoGrupal.query.order_by(asc(orden_columna)).all()
+    except Exception as e:
+        # Captura cualquier error que ocurra durante la consulta
+        print(f"Error al obtener los préstamos grupales: {e}")
+        prestamos_grupales = []
 
+    # Devuelve la plantilla con los datos
     return render_template('prestamos_grupales/lista_prestamos_grupales.html', prestamos_grupales=prestamos_grupales)
 
 
@@ -124,6 +134,9 @@ def asignar_prestamos_individuales(prestamo_grupal_id):
     return render_template('prestamos_grupales/asignar_prestamos_individuales.html', 
                            prestamo_grupal=prestamo_grupal, clientes=clientes)
 
+
+
+
 @prestamos_grupales_bp.route('/<int:prestamo_grupal_id>/prestamos_individuales')
 def prestamos_individuales(prestamo_grupal_id):
     # Obtener el préstamo grupal
@@ -170,7 +183,6 @@ def descargar_contrato(contrato_id):
 
 
 
-# Ruta para generar contrato
 @prestamos_grupales_bp.route('/generar_contrato/<int:prestamo_grupal_id>', methods=['GET'])
 def generar_contrato(prestamo_grupal_id):
     # Obtener el préstamo grupal por su ID
@@ -184,15 +196,30 @@ def generar_contrato(prestamo_grupal_id):
         flash('No se encontraron clientes asociados a este préstamo grupal.', 'error')
         return redirect(url_for('prestamos_grupales.lista_prestamos_grupales'))
 
+    # Crear una lista para almacenar los archivos generados (si los vas a permitir descargar en conjunto)
+    archivos_generados = []
+
     # Aquí podemos proceder a generar el contrato para cada cliente
     for prestamo_individual in clientes_asociados:
         cliente = Cliente.query.get(prestamo_individual.cliente_id)
-        
+
         # Generar el contrato específico para el cliente
         contrato_generado = generar_contrato_logic(cliente.id, prestamo_grupal)
 
-    # Retornar el archivo generado (o redirigir a una página donde el usuario pueda descargarlo)
+        # Aquí, si quieres guardar el contrato generado, puedes añadirlo a la lista de archivos
+        # Si se quiere permitir que el usuario descargue los contratos como archivos, por ejemplo:
+        archivos_generados.append(contrato_generado)
+
+    # Si deseas hacer algo con los archivos generados, como retornar uno específico, se podría modificar:
+    # Por ejemplo, solo retornar el último contrato generado
+    # return send_file(archivos_generados[-1], as_attachment=True)  # Si deseas devolver uno específico
+
+    # Si has guardado los contratos y deseas permitir su descarga en el futuro, podrías crear un índice de los mismos
+    flash('Los contratos han sido generados exitosamente.', 'success')
+
+    # Redirigir a la lista de préstamos grupales o a cualquier otra página después de la generación
     return redirect(url_for('prestamos_grupales.lista_prestamos_grupales'))
+
 
 
 
@@ -203,12 +230,15 @@ def generar_contrato_logic(cliente_id, prestamo_grupal):
 
     # Obtener el monto del préstamo individual asignado a este cliente
     monto_cliente = None
-    for prestamo_individual in prestamo_grupal.prestamos_individuales:
-        if prestamo_individual.cliente_id == cliente.id:
-            monto_cliente = prestamo_individual.monto
+    prestamo_individual = None  # Variable para almacenar el prestamo individual
+
+    for prestamo in prestamo_grupal.prestamos_individuales:
+        if prestamo.cliente_id == cliente.id:
+            monto_cliente = prestamo.monto
+            prestamo_individual = prestamo  # Asignamos el prestamo_individual
             break
 
-    if monto_cliente is None:
+    if monto_cliente is None or prestamo_individual is None:
         raise ValueError(f"No se encontró el monto de préstamo para el cliente {cliente.nombre} {cliente.apellido}.")
 
     # Redondear el monto del préstamo para evitar decimales en el nombre del archivo
@@ -270,7 +300,8 @@ def generar_contrato_logic(cliente_id, prestamo_grupal):
     nuevo_contrato = Contrato(
         nombre_archivo=nombre_archivo,
         archivo=buffer.getvalue(),
-        cliente_id=cliente.id
+        cliente_id=cliente.id,
+        prestamo_individual_id=prestamo_individual.id  # Asignar el prestamo_individual_id
     )
     
     db.session.add(nuevo_contrato)

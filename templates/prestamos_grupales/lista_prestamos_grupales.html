@@ -33,7 +33,7 @@
                     <tr>
                         <td>{{ prestamo.grupo.nombre }}</td>
                         <td>S/ {{ prestamo.monto_total }}</td>
-                        <td>{{ prestamo.fecha_desembolso }}</td>
+                        <td>{{ prestamo.fecha_desembolso.strftime('%Y-%m-%d') }}</td>
                         <td>
                             <a href="{{ url_for('prestamos_grupales.prestamos_individuales', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-primary" data-bs-toggle="tooltip" title="Ver Préstamos Individuales">
                                 <i class="bi bi-eye"></i> Ver P.I.
