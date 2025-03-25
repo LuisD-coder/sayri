@@ -6,57 +6,57 @@
 <div class="container" style="background-color: #f4f4f9; padding: 20px; border-radius: 8px;">
     <h2 class="text-center my-4 text-dark">Lista de Préstamos Grupales</h2>
 
-    <div class="table-responsive">
-        <table class="table table-dark table-hover table-bordered">
-            <thead class="table-secondary text-dark">
-                <tr>
-                    <th>
-                        <a href="{{ url_for('prestamos_grupales.lista_prestamos_grupales', orden='grupo') }}" class="text-dark text-decoration-none">
-                            Grupo <i class="bi bi-arrow-down-up"></i>
-                        </a>
-                    </th>
-                    <th>
-                        <a href="{{ url_for('prestamos_grupales.lista_prestamos_grupales', orden='monto') }}" class="text-dark text-decoration-none">
-                            Monto Total (S/) <i class="bi bi-arrow-down-up"></i>
-                        </a>
-                    </th>
-                    <th>
-                        <a href="{{ url_for('prestamos_grupales.lista_prestamos_grupales', orden='fecha') }}" class="text-dark text-decoration-none">
-                            Fecha de Desembolso <i class="bi bi-arrow-down-up"></i>
-                        </a>
-                    </th>
-                    <th>Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for prestamo in prestamos_grupales %}
-                    <tr>
-                        <td>{{ prestamo.grupo.nombre }}</td>
-                        <td>S/ {{ prestamo.monto_total }}</td>
-                        <td>{{ prestamo.fecha_desembolso.strftime('%Y-%m-%d') }}</td>
-                        <td>
-                            <a href="{{ url_for('prestamos_grupales.prestamos_individuales', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-primary" data-bs-toggle="tooltip" title="Ver Préstamos Individuales">
-                                <i class="bi bi-eye"></i> Ver P.I.
-                            </a>
-                            <a href="{{ url_for('prestamos_grupales.asignar_prestamos_individuales', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-success" data-bs-toggle="tooltip" title="Asignar Préstamos Individuales">
-                                <i class="bi bi-plus-circle"></i> Asignar P.I.
-                            </a>
-                            <a href="{{ url_for('prestamos_grupales.generar_contrato', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-warning" data-bs-toggle="tooltip" title="Generar Contrato">
-                                <i class="bi bi-file-earmark-pdf"></i> Generar Contrato
-                            </a>
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
+    <!-- Formulario para seleccionar grupo -->
+    <form method="GET" action="{{ url_for('prestamos_grupales.lista_prestamos_grupales') }}" class="mb-4">
+        <div class="row">
+            <div class="col-md-6">
+                <label for="grupo_id" class="form-label text-dark">Selecciona un Grupo:</label>
+                <select name="grupo_id" id="grupo_id" class="form-select" required>
+                    <option value="" disabled selected>Elige un grupo</option>
+                    {% for grupo in grupos %}
+                        <option value="{{ grupo.id }}" {% if grupo.id == selected_grupo_id %}selected{% endif %}>{{ grupo.nombre }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-6 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">Ver Préstamos</button>
+            </div>
+        </div>
+    </form>
 
-<!-- Añadir este script para los tooltips -->
-<script>
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl)
-    })
-</script>
+    {% if prestamos_grupales %}
+        <div class="table-responsive">
+            <table class="table table-dark table-hover table-bordered">
+                <thead class="table-secondary text-dark">
+                    <tr>
+                        <th>Monto Total (S/)</th>
+                        <th>Fecha de Desembolso</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for prestamo in prestamos_grupales %}
+                        <tr>
+                            <td>S/ {{ prestamo.monto_total }}</td>
+                            <td>{{ prestamo.fecha_desembolso.strftime('%d/%m/%Y') }}</td>
+                            <td>
+                                <a href="{{ url_for('prestamos_grupales.prestamos_individuales', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-primary">
+                                    <i class="bi bi-eye"></i> Ver P.I.
+                                </a>
+                                <a href="{{ url_for('prestamos_grupales.asignar_prestamos_individuales', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-success">
+                                    <i class="bi bi-plus-circle"></i> Asignar P.I.
+                                </a>
+                                <a href="{{ url_for('prestamos_grupales.generar_contrato', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-warning">
+                                    <i class="bi bi-file-earmark-pdf"></i> Generar Contrato
+                                </a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% elif selected_grupo_id %}
+        <p class="text-center text-muted">No hay préstamos registrados para este grupo.</p>
+    {% endif %}
+</div>
 {% endblock %}

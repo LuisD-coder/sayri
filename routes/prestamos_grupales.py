@@ -2,10 +2,12 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash
 from models import db, PrestamoGrupal, Grupo, PrestamoIndividual, Pago, Cliente, Contrato
 from datetime import datetime, timedelta
 import fitz
+import zipfile
+from werkzeug.utils import secure_filename
 import os
 from io import BytesIO
 import io
-from flask import send_file
+from flask import send_file, Response
 from sqlalchemy import asc, desc
 
 
@@ -47,32 +49,19 @@ def nuevo_prestamo_grupal():
 
 @prestamos_grupales_bp.route('/', methods=['GET'])
 def lista_prestamos_grupales():
-    # Obtener el valor de la columna de orden (por defecto 'grupo')
-    orden_columna = request.args.get('orden', 'grupo')
+    grupo_id = request.args.get('grupo_id', type=int)
 
-    # Mapea las columnas válidas para ordenación
-    columnas_validas = {
-        'grupo': PrestamoGrupal.grupo_id,
-        'monto': PrestamoGrupal.monto_total,
-        'fecha': PrestamoGrupal.fecha_desembolso
-    }
+    grupos = Grupo.query.all()
 
-    # Asegúrate de que 'orden_columna' sea una columna válida
-    if orden_columna in columnas_validas:
-        orden_columna = columnas_validas[orden_columna]
-    else:
-        orden_columna = PrestamoGrupal.grupo_id  # Valor por defecto
+    # Si no se ha seleccionado un grupo, no cargamos préstamos
+    prestamos_grupales = []
+    if grupo_id:
+        prestamos_grupales = PrestamoGrupal.query.filter_by(grupo_id=grupo_id).all()
 
-    # Realiza la consulta ordenada
-    try:
-        prestamos_grupales = PrestamoGrupal.query.order_by(asc(orden_columna)).all()
-    except Exception as e:
-        # Captura cualquier error que ocurra durante la consulta
-        print(f"Error al obtener los préstamos grupales: {e}")
-        prestamos_grupales = []
-
-    # Devuelve la plantilla con los datos
-    return render_template('prestamos_grupales/lista_prestamos_grupales.html', prestamos_grupales=prestamos_grupales)
+    return render_template('prestamos_grupales/lista_prestamos_grupales.html',
+                           prestamos_grupales=prestamos_grupales,
+                           grupos=grupos,
+                           selected_grupo_id=grupo_id)
 
 
 
@@ -185,41 +174,53 @@ def descargar_contrato(contrato_id):
 
 @prestamos_grupales_bp.route('/generar_contrato/<int:prestamo_grupal_id>', methods=['GET'])
 def generar_contrato(prestamo_grupal_id):
-    # Obtener el préstamo grupal por su ID
+    # Obtener el préstamo grupal
     prestamo_grupal = PrestamoGrupal.query.get_or_404(prestamo_grupal_id)
 
-    # Obtener los clientes asociados a ese préstamo grupal
+    # Obtener los clientes asociados al préstamo grupal
     clientes_asociados = PrestamoIndividual.query.filter_by(prestamo_grupal_id=prestamo_grupal.id).all()
 
-    # Si no hay clientes asociados, mostrar un error
     if not clientes_asociados:
         flash('No se encontraron clientes asociados a este préstamo grupal.', 'error')
         return redirect(url_for('prestamos_grupales.lista_prestamos_grupales'))
 
-    # Crear una lista para almacenar los archivos generados (si los vas a permitir descargar en conjunto)
-    archivos_generados = []
+    # Crear una carpeta temporal en memoria
+    zip_buffer = BytesIO()
 
-    # Aquí podemos proceder a generar el contrato para cada cliente
-    for prestamo_individual in clientes_asociados:
-        cliente = Cliente.query.get(prestamo_individual.cliente_id)
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for prestamo_individual in clientes_asociados:
+            cliente = Cliente.query.get(prestamo_individual.cliente_id)
+            if not cliente:
+                flash(f'Error: Cliente con ID {prestamo_individual.cliente_id} no encontrado.', 'error')
+                continue
 
-        # Generar el contrato específico para el cliente
-        contrato_generado = generar_contrato_logic(cliente.id, prestamo_grupal)
+            # Generar el contrato (asegurándonos de obtener el contenido binario)
+            contrato_response = generar_contrato_logic(cliente.id, prestamo_grupal)
 
-        # Aquí, si quieres guardar el contrato generado, puedes añadirlo a la lista de archivos
-        # Si se quiere permitir que el usuario descargue los contratos como archivos, por ejemplo:
-        archivos_generados.append(contrato_generado)
+            if isinstance(contrato_response, Response):
+                contrato_response.direct_passthrough = False  # 🔹 Desactivar modo passthrough
+                contrato_bytes = contrato_response.get_data()
+            else:
+                flash(f'Error al generar contrato para {cliente.nombre} {cliente.apellido}.', 'error')
+                continue
 
-    # Si deseas hacer algo con los archivos generados, como retornar uno específico, se podría modificar:
-    # Por ejemplo, solo retornar el último contrato generado
-    # return send_file(archivos_generados[-1], as_attachment=True)  # Si deseas devolver uno específico
+            # Obtener el monto del cliente
+            monto_cliente = prestamo_individual.monto  # O el campo adecuado que contenga el monto
 
-    # Si has guardado los contratos y deseas permitir su descarga en el futuro, podrías crear un índice de los mismos
-    flash('Los contratos han sido generados exitosamente.', 'success')
+            # Crear nombre de archivo con monto incluido
+            nombre_archivo = secure_filename(f"Contrato_{cliente.nombre}_{cliente.apellido}_Monto_{monto_cliente}.pdf")
 
-    # Redirigir a la lista de préstamos grupales o a cualquier otra página después de la generación
-    return redirect(url_for('prestamos_grupales.lista_prestamos_grupales'))
+            # Guardar el contrato en el archivo ZIP
+            zipf.writestr(nombre_archivo, contrato_bytes)
 
+    # Mover el puntero del buffer al inicio
+    zip_buffer.seek(0)
+
+    grupo_nombre = prestamo_grupal.grupo.nombre
+    fecha_desembolso = prestamo_grupal.fecha_desembolso.strftime('%d-%m-%Y')
+
+    # Enviar el archivo ZIP para descarga automática
+    return send_file(zip_buffer, mimetype='application/zip', as_attachment=True, download_name=f"Contratos_{grupo_nombre}_Desembolso_{fecha_desembolso}.zip")
 
 
 
