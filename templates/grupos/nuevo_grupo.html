@@ -3,10 +3,79 @@
 {% block title %}Nuevo Grupo{% endblock %}
 
 {% block content %}
-    <h2>Nuevo Grupo</h2>
-    <form action="{{ url_for('grupos.nuevo_grupo') }}" method="POST">
+    <h2 class="title">Nuevo Grupo</h2>
+
+    <!-- Formulario para crear nuevo grupo -->
+    <form action="{{ url_for('grupos.nuevo_grupo') }}" method="POST" class="new-group-form">
         <label for="nombre">Nombre del Grupo:</label>
-        <input type="text" id="nombre" name="nombre" required>
-        <button type="submit">Crear Grupo</button>
+        <input type="text" id="nombre" name="nombre" required placeholder="Ingrese el nombre del grupo">
+
+        <button type="submit" class="btn btn-submit">Crear Grupo</button>
     </form>
+
+    <style>
+        /* Título */
+        .title {
+            text-align: center;
+            font-size: 28px;
+            margin-bottom: 30px;
+        }
+
+        /* Estilo del formulario */
+        .new-group-form {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .new-group-form label {
+            display: block;
+            margin-bottom: 10px;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .new-group-form input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+        }
+
+        .new-group-form input:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+
+        .btn-submit {
+            width: 100%;
+            background: #007bff;
+            color: white;
+            padding: 12px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        .btn-submit:hover {
+            background: #0056b3;
+        }
+
+        /* Adaptación para dispositivos móviles */
+        @media screen and (max-width: 768px) {
+            .new-group-form {
+                padding: 15px;
+            }
+
+            .btn-submit {
+                padding: 10px;
+            }
+        }
+    </style>
 {% endblock %}

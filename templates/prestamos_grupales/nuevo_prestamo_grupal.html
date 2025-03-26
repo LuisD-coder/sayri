@@ -3,18 +3,92 @@
 {% block title %}Nuevo Préstamo Grupal{% endblock %}
 
 {% block content %}
-    <h2>Nuevo Préstamo Grupal</h2>
+<div class="container" style="background-color: #f4f4f9; padding: 20px; border-radius: 8px;">
+    <h2 class="text-center my-4 text-dark">Nuevo Préstamo Grupal</h2>
+    
     <form action="{{ url_for('prestamos_grupales.nuevo_prestamo_grupal') }}" method="POST">
-        <label for="grupo_id">Seleccionar Grupo:</label>
-        <select name="grupo_id" required>
-            {% for grupo in grupos %}
-                <option value="{{ grupo.id }}">{{ grupo.nombre }}</option>
-            {% endfor %}
-        </select>
+        <div class="mb-4">
+            <label for="grupo_id" class="form-label">Seleccionar Grupo:</label>
+            <select name="grupo_id" class="form-select" required>
+                {% for grupo in grupos %}
+                    <option value="{{ grupo.id }}">{{ grupo.nombre }}</option>
+                {% endfor %}
+            </select>
+        </div>
 
-        <label for="fecha_desembolso">Fecha de Desembolso:</label>
-        <input type="date" name="fecha_desembolso" required>
+        <div class="mb-4">
+            <label for="fecha_desembolso" class="form-label">Fecha de Desembolso:</label>
+            <input type="date" name="fecha_desembolso" class="form-control" required>
+        </div>
 
-        <button type="submit">Crear Préstamo Grupal</button>
+        <div class="text-center">
+            <button type="submit" class="btn btn-primary">Crear Préstamo Grupal</button>
+        </div>
     </form>
+</div>
+
+<style>
+    /* Contenedor principal */
+    .container {
+        background-color: #f4f4f9;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        margin-top: 30px;
+    }
+
+    /* Título */
+    h2 {
+        font-size: 1.8rem;
+        color: #333;
+        font-weight: bold;
+    }
+
+    /* Estilos de los formularios */
+    .form-label {
+        font-size: 1rem;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .form-select, .form-control {
+        width: 100%;
+        padding: 10px;
+        margin-top: 8px;
+        font-size: 1rem;
+        border-radius: 5px;
+        border: 1px solid #ccc;
+    }
+
+    .form-select:focus, .form-control:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+    }
+
+    /* Estilo del botón */
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 5px;
+        border: none;
+        font-size: 1.1rem;
+        font-weight: bold;
+        transition: background-color 0.3s ease;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+    }
+
+    /* Alineación del botón */
+    .text-center {
+        text-align: center;
+    }
+
+    /* Espaciado entre elementos */
+    .mb-4 {
+        margin-bottom: 16px;
+    }
+</style>
 {% endblock %}

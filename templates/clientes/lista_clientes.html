@@ -3,29 +3,151 @@
 {% block title %}Lista de Clientes{% endblock %}
 
 {% block content %}
-    <h2>Lista de Clientes</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>Nombre</th>
-                <th>Apellido</th>
-                <th>DNI</th>
-                <th>Grupo</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for cliente in clientes %}
-                <tr>
-                    <td>{{ cliente.nombre }}</td>
-                    <td>{{ cliente.apellido }}</td>
-                    <td>{{ cliente.dni }}</td>
-                    <td>{{ cliente.grupo.nombre if cliente.grupo else 'Sin Grupo' }}</td>
-                    <td>
-                        <a href="{{ url_for('clientes.detalle_cliente', cliente_id=cliente.id) }}">Ver Detalles</a>
-                    </td>
-                </tr>
+    <h2 class="title">Lista de Clientes</h2>
+
+    <!-- Botón para agregar nuevo cliente -->
+    <div class="add-client-container">
+        <a href="{{ url_for('clientes.nuevo_cliente') }}" class="btn btn-add">+ Nuevo Cliente</a>
+    </div>
+
+    <!-- Filtro por grupo -->
+    <form method="GET" action="{{ url_for('clientes.lista_clientes') }}" class="filter-form">
+        <label for="grupo_id">Filtrar por Grupo:</label>
+        <select name="grupo_id" id="grupo_id" onchange="this.form.submit()">
+            <option value="">Todos los Grupos</option>
+            {% for grupo in grupos %}
+                <option value="{{ grupo.id }}" {% if grupo.id == selected_grupo %}selected{% endif %}>
+                    {{ grupo.nombre }}
+                </option>
             {% endfor %}
-        </tbody>
-    </table>
+        </select>
+    </form>
+
+    <!-- Contenedor de tarjetas -->
+    <div class="clientes-grid">
+        {% for cliente in clientes.items %}
+            <div class="cliente-card">
+                <h3>{{ cliente.nombre }} {{ cliente.apellido }}</h3>
+                <p><strong>DNI:</strong> {{ cliente.dni }}</p>
+                <p><strong>Grupo:</strong> {{ cliente.grupo.nombre if cliente.grupo else 'Sin Grupo' }}</p>
+                <a href="{{ url_for('clientes.detalle_cliente', cliente_id=cliente.id) }}" class="btn">Ver Detalles</a>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Paginación -->
+    <div class="pagination">
+        {% if clientes.has_prev %}
+            <a href="{{ url_for('clientes.lista_clientes', page=clientes.prev_num, grupo_id=selected_grupo) }}">Anterior</a>
+        {% endif %}
+
+        <span>Página {{ clientes.page }} de {{ clientes.pages }}</span>
+
+        {% if clientes.has_next %}
+            <a href="{{ url_for('clientes.lista_clientes', page=clientes.next_num, grupo_id=selected_grupo) }}">Siguiente</a>
+        {% endif %}
+    </div>
+
+    <style>
+        /* Diseño general */
+        .title {
+            text-align: center;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+
+        /* Contenedor del botón de agregar */
+        .add-client-container {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        /* Botón de agregar nuevo cliente */
+        .btn-add {
+            background: #28a745;
+            color: white;
+            text-decoration: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            font-weight: bold;
+            display: inline-block;
+            transition: 0.3s;
+        }
+        .btn-add:hover {
+            background: #218838;
+        }
+
+        /* Filtro */
+        .filter-form {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .filter-form select {
+            padding: 8px;
+            font-size: 16px;
+        }
+
+        /* Grid de clientes */
+        .clientes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            padding: 10px;
+        }
+
+        /* Tarjetas de clientes */
+        .cliente-card {
+            background: white;
+            border-radius: 10px;
+            padding: 15px;
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .cliente-card:hover {
+            transform: translateY(-5px);
+        }
+        .cliente-card h3 {
+            margin-bottom: 10px;
+            font-size: 18px;
+            color: #333; /* Asegura que el texto sea visible */
+        }
+        .cliente-card p {
+            margin: 5px 0;
+            font-size: 14px;
+            color: #555;
+        }
+
+        /* Botón de detalles */
+        .btn {
+            display: inline-block;
+            background: #007bff;
+            color: white;
+            text-decoration: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+
+        /* Paginación */
+        .pagination {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .pagination a {
+            text-decoration: none;
+            padding: 8px 12px;
+            background: #007bff;
+            color: white;
+            border-radius: 5px;
+            margin: 5px;
+        }
+        .pagination a:hover {
+            background: #0056b3;
+        }
+    </style>
+
 {% endblock %}

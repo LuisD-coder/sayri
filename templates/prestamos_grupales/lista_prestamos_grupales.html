@@ -6,6 +6,11 @@
 <div class="container" style="background-color: #f4f4f9; padding: 20px; border-radius: 8px;">
     <h2 class="text-center my-4 text-dark">Lista de Préstamos Grupales</h2>
 
+    <!-- Botón para nuevo préstamo -->
+    <div class="text-center mb-4">
+        <a href="{{ url_for('prestamos_grupales.nuevo_prestamo_grupal') }}" class="btn btn-success">+ Nuevo Préstamo</a>
+    </div>
+
     <!-- Formulario para seleccionar grupo -->
     <form method="GET" action="{{ url_for('prestamos_grupales.lista_prestamos_grupales') }}" class="mb-4">
         <div class="row">
@@ -59,4 +64,82 @@
         <p class="text-center text-muted">No hay préstamos registrados para este grupo.</p>
     {% endif %}
 </div>
+
+<style>
+    /* Botón de nuevo préstamo */
+    .btn-success {
+        background-color: #28a745;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 5px;
+        text-decoration: none;
+        font-weight: bold;
+        transition: background-color 0.3s;
+        margin-bottom: 20px;
+    }
+
+    .btn-success:hover {
+        background-color: #218838;
+    }
+
+    /* Estilos generales */
+    .container {
+        background-color: #f4f4f9;
+        padding: 20px;
+        border-radius: 8px;
+    }
+
+    .table-responsive {
+        margin-top: 30px;
+    }
+
+    .table {
+        width: 100%;
+        border-radius: 10px;
+        background: #fff;
+    }
+
+    .table th, .table td {
+        text-align: center;
+        padding: 12px;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: #f1f1f1;
+    }
+
+    /* Estilos del título */
+    .text-center {
+        text-align: center;
+    }
+
+    .text-dark {
+        color: #333;
+    }
+
+    .my-4 {
+        margin-top: 20px;
+        margin-bottom: 20px;
+    }
+
+    /* Estilos del formulario */
+    .form-select {
+        font-size: 16px;
+        padding: 8px;
+        border-radius: 5px;
+    }
+
+    .btn-primary {
+        background-color: #007bff;
+        color: white;
+        padding: 12px 20px;
+        border-radius: 5px;
+        text-decoration: none;
+    }
+
+    .btn-primary:hover {
+        background-color: #0056b3;
+    }
+</style>
+
 {% endblock %}

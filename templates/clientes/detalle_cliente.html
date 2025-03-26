@@ -3,29 +3,85 @@
 {% block title %}Detalles del Cliente{% endblock %}
 
 {% block content %}
-    <h2>Detalles del Cliente</h2>
+    <div class="container">
+        <h2 class="text-center mb-4">Detalles del Cliente</h2>
 
-    <div>
-        <p><strong>Nombre:</strong> {{ cliente.nombre }} {{ cliente.apellido }}</p>
-        <p><strong>DNI:</strong> {{ cliente.dni }}</p>
-        <p><strong>Celular:</strong> {{ cliente.celular }}</p>
-        <p><strong>Operadora:</strong> {{ cliente.operadora }}</p>
-        <p><strong>Banco:</strong> {{ cliente.banco }}</p>
-        <p><strong>Número de Cuenta:</strong> {{ cliente.numero_cuenta }}</p>
-        <p><strong>Fecha de Registro:</strong> {{ cliente.fecha_registro }}</p>
+        <div class="card p-4 mb-4 shadow-sm">
+            <h3 class="mb-3">Información del Cliente</h3>
+            <p><strong>Nombre:</strong> {{ cliente.nombre }} {{ cliente.apellido }}</p>
+            <p><strong>DNI:</strong> {{ cliente.dni }}</p>
+            <p><strong>Celular:</strong> {{ cliente.celular }}</p>
+            <p><strong>Operadora:</strong> {{ cliente.operadora }}</p>
+            <p><strong>Banco:</strong> {{ cliente.banco }}</p>
+            <p><strong>Número de Cuenta:</strong> {{ cliente.numero_cuenta }}</p>
+            <p><strong>Fecha de Registro:</strong> {{ cliente.fecha_registro }}</p>
+        </div>
 
-        <h3>Préstamos del Cliente:</h3>
-        <ul>
-            {% for prestamo in cliente.prestamos %}
-                <li>
-                    <p><strong>Prestamo ID:</strong> {{ prestamo.id }}</p>
-                    <p><strong>Monto:</strong> S/{{ prestamo.monto }}</p>
-                    <p><strong>Fecha de Desembolso:</strong> {{ prestamo.fecha_desembolso }}</p>
-                    <p><strong>Estado:</strong> {{ prestamo.estado }}</p>
-                </li>
-            {% endfor %}
-        </ul>
+        <div class="card p-4 mb-4 shadow-sm">
+            <h3 class="mb-3">Préstamos Individuales</h3>
+            <ul class="list-group">
+                {% for prestamo in prestamos %}
+                    <li class="list-group-item mb-3">
+                        <p><strong>Prestamo ID:</strong> {{ prestamo.id }}</p>
+                        <p><strong>Monto:</strong> S/{{ prestamo.monto }}</p>
+                        <p><strong>Monto Pagado:</strong> S/{{ prestamo.monto_pagado }}</p>
+                        <p><strong>Monto Pendiente:</strong> S/{{ prestamo.monto_pendiente }}</p>
+                        <p><strong>Fecha de Desembolso:</strong> {{ prestamo.prestamo_grupal.fecha_desembolso.strftime('%d/%m/%Y') }}</p>
+                        <p><strong>Estado:</strong> {{ prestamo.estado }}</p>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
 
-        <a href="{{ url_for('clientes.lista_clientes') }}">Volver a la lista de clientes</a>
+        <div class="card p-4 mb-4 shadow-sm">
+            <h3 class="mb-3">Préstamos Grupales</h3>
+            <ul class="list-group">
+                {% for prestamo_grupal in prestamos_grupales %}
+                    <li class="list-group-item mb-3">
+                        <p><strong>Grupo:</strong> {{ prestamo_grupal.grupo.nombre }}</p>
+                        <p><strong>Monto Total:</strong> S/{{ prestamo_grupal.monto_total }}</p>
+                        <p><strong>Fecha de Desembolso:</strong> {{ prestamo_grupal.fecha_desembolso }}</p>
+                        <p><strong>Préstamos Individuales:</strong></p>
+                        <ul class="list-group ml-4">
+                            {% for prestamo_individual in prestamo_grupal.prestamos_individuales %}
+                                <li class="list-group-item">
+                                    <p><strong>Cliente:</strong> {{ prestamo_individual.cliente.nombre }} {{ prestamo_individual.cliente.apellido }}</p>
+                                    <p><strong>Monto:</strong> S/{{ prestamo_individual.monto }}</p>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="card p-4 mb-4 shadow-sm">
+            <h3 class="mb-3">Contratos</h3>
+            <ul class="list-group">
+                {% for contrato in contratos %}
+                    <li class="list-group-item mb-3">
+                        <p><strong>Nombre del Archivo:</strong> {{ contrato.nombre_archivo }}</p>
+                        <p><strong>Fecha de Creación:</strong> {{ contrato.fecha_creacion }}</p>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="card p-4 mb-4 shadow-sm">
+            <h3 class="mb-3">Pagos</h3>
+            <ul class="list-group">
+                {% for pago in pagos %}
+                    <li class="list-group-item mb-3">
+                        <p><strong>Monto Pagado:</strong> S/{{ pago.monto_pagado }}</p>
+                        <p><strong>Estado:</strong> {{ pago.estado }}</p>
+                        <p><strong>Fecha de Pago:</strong> {{ pago.fecha_pago }}</p>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+
+        <div class="text-center">
+            <a href="{{ url_for('clientes.lista_clientes') }}" class="btn btn-primary">Volver a la lista de clientes</a>
+        </div>
     </div>
 {% endblock %}

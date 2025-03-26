@@ -3,47 +3,155 @@
 {% block title %}Nuevo Cliente{% endblock %}
 
 {% block content %}
-    <h2>Nuevo Cliente</h2>
-    <form action="{{ url_for('clientes.nuevo_cliente') }}" method="POST">
-        <label for="nombre">Nombre:</label>
-        <input type="text" id="nombre" name="nombre" required>
+    <div class="container">
+        <h2 class="form-title">Registrar Nuevo Cliente</h2>
+        <div class="form-wrapper">
+            <form action="{{ url_for('clientes.nuevo_cliente') }}" method="POST">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="nombre">Nombre:</label>
+                        <input type="text" id="nombre" name="nombre" required>
+                    </div>
 
-        <label for="apellido">Apellido:</label>
-        <input type="text" id="apellido" name="apellido" required>
+                    <div class="form-group">
+                        <label for="apellido">Apellido:</label>
+                        <input type="text" id="apellido" name="apellido" required>
+                    </div>
 
-        <label for="dni">DNI:</label>
-        <input type="text" id="dni" name="dni" required>
+                    <div class="form-group">
+                        <label for="dni">DNI:</label>
+                        <input type="text" id="dni" name="dni" required>
+                    </div>
 
-        <label for="celular">Celular:</label>
-        <input type="text" id="celular" name="celular" required>
+                    <div class="form-group">
+                        <label for="celular">Celular:</label>
+                        <input type="text" id="celular" name="celular" required>
+                    </div>
 
-        <label for="operadora">Operadora:</label>
-        <select id="operadora" name="operadora" required>
-            <option value="Claro">Claro</option>
-            <option value="Movistar">Movistar</option>
-            <option value="Entel">Entel</option>
-            <option value="Bitel">Bitel</option>
-        </select>
+                    <div class="form-group">
+                        <label for="operadora">Operadora:</label>
+                        <select id="operadora" name="operadora" required>
+                            <option value="Claro">Claro</option>
+                            <option value="Movistar">Movistar</option>
+                            <option value="Entel">Entel</option>
+                            <option value="Bitel">Bitel</option>
+                        </select>
+                    </div>
 
-        <label for="banco">Banco:</label>
-        <select id="banco" name="banco" required>
-            <option value="BN">BN</option>
-            <option value="BCP">BCP</option>
-            <option value="INTERBANK">INTERBANK</option>
-            <option value="BBVA">BBVA</option>
-            <option value="SCOTIABANK">SCOTIABANK</option>
-        </select>
+                    <div class="form-group">
+                        <label for="banco">Banco:</label>
+                        <select id="banco" name="banco" required>
+                            <option value="BN">BN</option>
+                            <option value="BCP">BCP</option>
+                            <option value="INTERBANK">INTERBANK</option>
+                            <option value="BBVA">BBVA</option>
+                            <option value="SCOTIABANK">SCOTIABANK</option>
+                        </select>
+                    </div>
 
-        <label for="numero_cuenta">Número de Cuenta:</label>
-        <input type="text" id="numero_cuenta" name="numero_cuenta" required>
+                    <div class="form-group">
+                        <label for="numero_cuenta">Número de Cuenta:</label>
+                        <input type="text" id="numero_cuenta" name="numero_cuenta" required>
+                    </div>
 
-        <label for="grupo_id">Seleccionar Grupo:</label>
-        <select name="grupo_id" required>
-            {% for grupo in grupos %}
-                <option value="{{ grupo.id }}">{{ grupo.nombre }}</option>
-            {% endfor %}
-        </select>
+                    <div class="form-group">
+                        <label for="grupo_id">Seleccionar Grupo:</label>
+                        <select name="grupo_id" required>
+                            {% for grupo in grupos %}
+                                <option value="{{ grupo.id }}">{{ grupo.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
 
-        <button type="submit">Crear Cliente</button>
-    </form>
+                <div class="btn-container">
+                    <button type="submit" class="btn-submit">Crear Cliente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <style>
+        /* Contenedor principal */
+        .container {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 20px;
+        }
+
+        /* Título */
+        .form-title {
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffffff;
+            margin-bottom: 20px;
+        }
+
+        /* Contenedor del formulario */
+        .form-wrapper {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Diseño en cuadrícula */
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+        }
+
+        /* Estilos de los grupos del formulario */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Etiquetas */
+        .form-group label {
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        /* Inputs y selects */
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        /* Botón */
+        .btn-container {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .btn-submit {
+            padding: 12px 25px;
+            background: #007bff;
+            color: white;
+            font-size: 18px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .btn-submit:hover {
+            background: #0056b3;
+        }
+
+        /* Diseño responsivo */
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
 {% endblock %}

@@ -3,25 +3,123 @@
 {% block title %}Lista de Grupos{% endblock %}
 
 {% block content %}
-    <h2>Lista de Grupos</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>Nombre</th>
-                <th>Acciones</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for grupo in grupos %}
-                <tr>
-                    <td>{{ grupo.nombre }}</td>
-                    <td>
-                        <a href="{{ url_for('grupos.asignar_clientes', grupo_id=grupo.id) }}">Asignar Clientes</a>
-                        <a href="{{ url_for('prestamos_grupales.prestamos_por_grupo', grupo_id=grupo.id) }}">Ver préstamos</a>
+    <h2 class="title">Lista de Grupos</h2>
 
-                    </td>
-                </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <!-- Botón para agregar nuevo grupo -->
+    <div class="add-group-container">
+        <a href="{{ url_for('grupos.nuevo_grupo') }}" class="btn btn-new-group">+ Nuevo Grupo</a>
+    </div>
+
+    <!-- Contenedor de tarjetas -->
+    <div class="grupos-grid">
+        {% for grupo in grupos %}
+            <div class="grupo-card">
+                <h3>{{ grupo.nombre }}</h3>
+                <div class="grupo-actions">
+                    <a href="{{ url_for('grupos.asignar_clientes', grupo_id=grupo.id) }}" class="btn btn-assign">Asignar Clientes</a>
+                    <a href="{{ url_for('prestamos_grupales.prestamos_por_grupo', grupo_id=grupo.id) }}" class="btn btn-view">Ver Préstamos</a>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <style>
+        /* Título */
+        .title {
+            text-align: center;
+            font-size: 28px;
+            margin-bottom: 30px;
+        }
+
+        /* Contenedor del botón de agregar */
+        .add-group-container {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        /* Botón de agregar nuevo grupo */
+        .btn-new-group {
+            background: #007bff;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            display: inline-block;
+            transition: background-color 0.3s;
+        }
+
+        .btn-new-group:hover {
+            background: #0056b3;
+        }
+
+        /* Grid de grupos */
+        .grupos-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            padding: 10px;
+        }
+
+        /* Tarjetas de grupo */
+        .grupo-card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0px 4px 15px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+            text-align: center;
+        }
+
+        .grupo-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .grupo-card h3 {
+            font-size: 20px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+
+        /* Acciones */
+        .grupo-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+        }
+
+        /* Estilos de los botones */
+        .btn {
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        .btn-assign {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-assign:hover {
+            background: #218838;
+        }
+
+        .btn-view {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-view:hover {
+            background: #0056b3;
+        }
+
+        /* Adaptación para dispositivos móviles */
+        @media screen and (max-width: 768px) {
+            .grupos-grid {
+                grid-template-columns: 1fr; /* 1 columna en móviles */
+            }
+        }
+    </style>
 {% endblock %}
