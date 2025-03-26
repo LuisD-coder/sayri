@@ -4,31 +4,35 @@
 
 {% block content %}
 <div class="container py-5">
-    <h2 class="text-center mb-4">Gestión de Pagos</h2>
+    <h2 class="text-center mb-4 text-white bg-dark p-3 rounded">Gestión de Pagos</h2>
 
     <!-- Formulario de selección de grupo -->
-    <form method="GET" action="{{ url_for('pagos.lista_pagos') }}" class="mb-4">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <label for="grupo_id" class="form-label">Seleccionar Grupo:</label>
-                <select name="grupo_id" id="grupo_id" class="form-select" required>
-                    <option value="">Selecciona un grupo</option>
-                    {% for grupo in grupos %}
-                        <option value="{{ grupo.id }}" {% if grupo.id == selected_grupo.id %}selected{% endif %}>{{ grupo.nombre }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-4 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary w-100">Ver Préstamos</button>
-            </div>
+    <div class="card shadow-lg border-0 mb-4">
+        <div class="card-body">
+            <form method="GET" action="{{ url_for('pagos.lista_pagos') }}">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <label for="grupo_id" class="form-label fw-semibold">Seleccionar Grupo:</label>
+                        <select name="grupo_id" id="grupo_id" class="form-select border-primary" required>
+                            <option value="">Selecciona un grupo</option>
+                            {% for grupo in grupos %}
+                                <option value="{{ grupo.id }}" {% if grupo.id == selected_grupo.id %}selected{% endif %}>{{ grupo.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100 shadow">Ver Préstamos</button>
+                    </div>
+                </div>
+            </form>
         </div>
-    </form>
+    </div>
 
     {% if selected_grupo %}
-        <h3 class="text-center mb-4">Préstamos del Grupo: {{ selected_grupo.nombre }}</h3>
+        <h3 class="text-center mb-4 text-white bg-primary p-3 rounded">Préstamos del Grupo: <span class="fw-bold">{{ selected_grupo.nombre }}</span></h3>
 
         {% for prestamo_grupal in prestamos_grupales %}
-            <div class="card mb-4 shadow-sm">
+            <div class="card mb-4 shadow-lg border-0">
                 <div class="card-header bg-dark text-white">
                     <h5 class="mb-0">Préstamo Grupal ID: {{ prestamo_grupal.id }}</h5>
                 </div>
@@ -36,77 +40,80 @@
                     <p><strong>Monto Total:</strong> S/. {{ prestamo_grupal.monto_total }}</p>
                     <p><strong>Fecha de Desembolso:</strong> {{ prestamo_grupal.fecha_desembolso.strftime('%d/%m/%Y') }}</p>
 
-                    <h5 class="mt-4">Préstamos Individuales:</h5>
+                    <h5 class="mt-4 text-primary">Préstamos Individuales:</h5>
 
-                    {% for prestamo in prestamo_grupal.prestamos_individuales %}
-                        <div class="card my-3 border-0 shadow-sm">
-                            <div class="card-body">
-                                <h6 class="mb-2"><strong>Cliente:</strong> {{ prestamo.cliente.nombre }} {{ prestamo.cliente.apellido }}</h6>
-                                <p class="mb-1"><strong>Monto Préstamo:</strong> S/. {{ prestamo.monto }}</p>
-                                <p class="mb-1"><strong>Monto Pendiente:</strong> S/. {{ prestamo.monto_pendiente }}</p>
+                    <div class="row">
+                        {% for prestamo in prestamo_grupal.prestamos_individuales %}
+                            <div class="col-md-6">
+                                <div class="card my-3 border-0 shadow-sm">
+                                    <div class="card-body">
+                                        <h6 class="mb-2 text-dark"><strong>Cliente:</strong> {{ prestamo.cliente.nombre }} {{ prestamo.cliente.apellido }}</h6>
+                                        <p class="mb-1"><strong>Monto Préstamo:</strong> S/. {{ prestamo.monto }}</p>
+                                        <p class="mb-1"><strong>Monto Pendiente:</strong> S/. {{ prestamo.monto_pendiente }}</p>
 
-                                <!-- Formulario de pago -->
-                                <form action="{{ url_for('pagos.agregar_pago', prestamo_id=prestamo.id) }}" method="POST" class="mt-3">
-                                    <div class="row g-3">
-                                        <div class="col-md-4">
-                                            <label class="form-label">Fecha de Pago:</label>
-                                            <select name="fecha_pago" class="form-select" required>
-                                                <option value="">Selecciona una fecha</option>
-                                                {% for pago in prestamo.pagos %}
-                                                    <option value="{{ pago.fecha_pago.strftime('%Y-%m-%d') }}" {% if pago.estado == 'Pagado' %}disabled{% endif %}>
-                                                        {{ pago.fecha_pago.strftime('%d/%m/%Y') }} 
-                                                        {% if pago.estado == 'Pagado' %}
-                                                            (Pagado)
-                                                        {% elif pago.estado == 'Pendiente' %}
-                                                            (Pendiente)
-                                                        {% elif pago.estado == 'Atrasado' %}
-                                                            (Atrasado)
-                                                        {% endif %}
-                                                    </option>
-                                                {% endfor %}
-                                            </select>
-                                        </div>
+                                        <!-- Formulario de pago -->
+                                        <form action="{{ url_for('pagos.agregar_pago', prestamo_id=prestamo.id) }}" method="POST" class="mt-3 p-3 bg-light shadow-sm rounded">
+                                            <div class="row g-3">
+                                                <div class="col-md-4">
+                                                    <label class="form-label fw-semibold">Fecha de Pago:</label>
+                                                    <select name="fecha_pago" class="form-select border-info" required>
+                                                        <option value="">Selecciona una fecha</option>
+                                                        {% for pago in prestamo.pagos %}
+                                                            <option value="{{ pago.fecha_pago.strftime('%Y-%m-%d') }}" {% if pago.estado == 'Pagado' %}disabled{% endif %}>
+                                                                {{ pago.fecha_pago.strftime('%d/%m/%Y') }} 
+                                                                {% if pago.estado == 'Pagado' %}
+                                                                    (✅ Pagado)
+                                                                {% elif pago.estado == 'Pendiente' %}
+                                                                    (⏳ Pendiente)
+                                                                {% elif pago.estado == 'Atrasado' %}
+                                                                    (⚠️ Atrasado)
+                                                                {% endif %}
+                                                            </option>
+                                                        {% endfor %}
+                                                    </select>
+                                                </div>
 
-                                        <div class="col-md-4">
-                                            <label class="form-label">Estado:</label>
-                                            <select name="estado_pago" class="form-select" required>
-                                                <option value="Pendiente">Pendiente</option>
-                                                <option value="Pagado">Pagado</option>
-                                                <option value="Atrasado">Atrasado</option>
-                                            </select>
-                                        </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label fw-semibold">Estado:</label>
+                                                    <select name="estado_pago" class="form-select border-info" required>
+                                                        <option value="Pendiente">Pendiente</option>
+                                                        <option value="Pagado">Pagado</option>
+                                                        <option value="Atrasado">Atrasado</option>
+                                                    </select>
+                                                </div>
 
-                                        <div class="col-md-4">
-                                            <label class="form-label">Monto Pagado:</label>
-                                            <input type="number" name="monto_pago" class="form-control" step="0.01" required placeholder="S/.">
-                                        </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label fw-semibold">Monto Pagado:</label>
+                                                    <input type="number" name="monto_pago" class="form-control border-info" step="0.01" required placeholder="S/.">
+                                                </div>
 
-                                        <div class="col-12">
-                                            <button type="submit" class="btn btn-success w-100">Añadir Pago</button>
-                                        </div>
-                                    </div>
-                                </form>
+                                                <div class="col-12">
+                                                    <button type="submit" class="btn btn-success w-100 shadow">Añadir Pago</button>
+                                                </div>
+                                            </div>
+                                        </form>
 
-                                <!-- Mostrar los días de retraso solo si el pago está atrasado -->
-                                {% for pago in prestamo.pagos %}
-                                    {% if pago.estado == 'Atrasado' %}
-                                        <p class="mb-1 text-danger"><strong>Días de Retraso:</strong> 
-                                            {% if current_date and pago.fecha_pago %}
-                                                {{ (current_date - pago.fecha_pago).days }} días
-                                            {% else %}
-                                                No disponible
+                                        <!-- Mostrar los días de retraso solo si el pago está atrasado -->
+                                        {% for pago in prestamo.pagos %}
+                                            {% if pago.estado == 'Atrasado' %}
+                                                <p class="mb-1 text-danger fw-bold"><strong>Días de Retraso:</strong> 
+                                                    {% if current_date and pago.fecha_pago %}
+                                                        {{ (current_date - pago.fecha_pago).days }} días
+                                                    {% else %}
+                                                        No disponible
+                                                    {% endif %}
+                                                </p>
                                             {% endif %}
-                                        </p>
-                                    {% endif %}
 
-                                    <!-- No mostrar días de retraso si el pago ya está pagado -->
-                                    {% if pago.estado == 'Pagado' %}
-                                        <p class="mb-1 text-success"><strong>Pago Realizado:</strong> El pago fue realizado con éxito.</p>
-                                    {% endif %}
-                                {% endfor %}
+                                            {% if pago.estado == 'Pagado' %}
+                                                <p class="mb-1 text-success fw-bold"><strong>Pago Realizado:</strong> ✅ El pago fue realizado con éxito.</p>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                    {% endfor %}
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
         {% endfor %}

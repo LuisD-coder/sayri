@@ -22,19 +22,40 @@ def lista_grupos():
     grupos = Grupo.query.all()
     return render_template('grupos/lista_grupos.html', grupos=grupos)
 
-# Asignar clientes a un grupo
+
 @grupos_bp.route('/<int:grupo_id>/asignar_clientes', methods=['GET', 'POST'])
 def asignar_clientes(grupo_id):
     grupo = Grupo.query.get_or_404(grupo_id)
-    clientes = Cliente.query.all()
+
+    # Obtener los clientes ya asignados al grupo actual
+    clientes_asignados = Cliente.query.filter_by(grupo_id=grupo_id).all()
+
+    # Obtener el valor del filtro
+    filtro = request.args.get('filtro', '').strip()
+
+    clientes_disponibles = []  # Inicializar la lista de clientes disponibles
+    
+    if filtro:
+        # Buscar clientes por nombre o DNI, incluso si están en otro grupo
+        clientes_disponibles = Cliente.query.filter(
+            (Cliente.nombre.ilike(f"%{filtro}%")) | (Cliente.dni.ilike(f"%{filtro}%"))
+        ).all()
+
+        # Excluir los clientes que ya están en el grupo actual
+        clientes_disponibles = [c for c in clientes_disponibles if c.id not in [cli.id for cli in clientes_asignados]]
 
     if request.method == 'POST':
-        # Aquí agregarías la lógica para asignar clientes al grupo
+        # Asignar clientes seleccionados al grupo
         for cliente_id in request.form.getlist('clientes'):
             cliente = Cliente.query.get(cliente_id)
             cliente.grupo_id = grupo.id
             db.session.commit()
-        return redirect(url_for('grupos.lista_grupos'))
+        return redirect(url_for('grupos.asignar_clientes', grupo_id=grupo.id))
 
-    return render_template('grupos/asignar_clientes.html', grupo=grupo, clientes=clientes)
-
+    return render_template(
+        'grupos/asignar_clientes.html',
+        grupo=grupo,
+        clientes_asignados=clientes_asignados,
+        clientes_disponibles=clientes_disponibles,
+        filtro=filtro
+    )

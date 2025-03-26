@@ -3,15 +3,63 @@
 {% block title %}Asignar Clientes al Grupo{% endblock %}
 
 {% block content %}
-    <h2>Asignar Clientes a: {{ grupo.nombre }}</h2>
-    <form action="{{ url_for('grupos.asignar_clientes', grupo_id=grupo.id) }}" method="POST">
-        <h3>Seleccionar Clientes:</h3>
-        {% for cliente in clientes %}
-            <div>
-                <input type="checkbox" name="clientes" value="{{ cliente.id }}" id="cliente_{{ cliente.id }}">
-                <label for="cliente_{{ cliente.id }}">{{ cliente.nombre }} {{ cliente.apellido }}</label>
+<div class="container py-4">
+    <h2 class="text-center text-white bg-dark p-3 rounded shadow">Asignar Clientes a: {{ grupo.nombre }}</h2>
+
+    <!-- Filtro de búsqueda -->
+    <div class="card p-4 shadow-sm mb-4">
+        <h4 class="text-center text-primary">Buscar Cliente</h4>
+        <form method="GET" action="{{ url_for('grupos.asignar_clientes', grupo_id=grupo.id) }}" class="d-flex">
+            <input type="text" name="filtro" id="filtroCliente" class="form-control me-2 shadow-sm" value="{{ filtro }}" placeholder="🔎 Nombre o DNI..." autocomplete="off">
+            <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Buscar</button>
+        </form>
+    </div>
+
+    <!-- Formulario para asignar clientes -->
+    <div class="card p-4 shadow-sm mb-4">
+        <h3 class="text-center text-success">Clientes Disponibles para Asignar</h3>
+        <form action="{{ url_for('grupos.asignar_clientes', grupo_id=grupo.id) }}" method="POST">
+            <div id="listaClientes">
+                {% if clientes_disponibles %}
+                    <div class="row">
+                        {% for cliente in clientes_disponibles %}
+                            <div class="col-md-6">
+                                <div class="card shadow-sm p-3 mb-3">
+                                    <input type="checkbox" name="clientes" value="{{ cliente.id }}" id="cliente_{{ cliente.id }}">
+                                    <label for="cliente_{{ cliente.id }}">
+                                        <strong class="text-dark">{{ cliente.nombre }} {{ cliente.apellido }}</strong> <br>
+                                        <span class="text-muted">DNI: {{ cliente.dni }}</span> <br>
+                                        <span class="badge bg-info">Grupo: {{ cliente.grupo.nombre if cliente.grupo else 'Sin Grupo' }}</span>
+                                    </label>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-center text-muted">No se encontraron clientes disponibles para asignar con este filtro.</p>
+                {% endif %}
             </div>
-        {% endfor %}
-        <button type="submit">Asignar Clientes</button>
-    </form>
+            <button type="submit" class="btn btn-success w-100 mt-3 shadow">Asignar Clientes</button>
+        </form>
+    </div>
+
+    <!-- Clientes Asignados al Grupo -->
+    <div class="card p-4 shadow-sm">
+        <h3 class="text-center text-danger">Clientes Asignados al Grupo</h3>
+        {% if clientes_asignados %}
+            <div class="row">
+                {% for cliente in clientes_asignados %}
+                    <div class="col-md-6">
+                        <div class="card p-3 mb-3 shadow-sm bg-light">
+                            <strong class="text-dark">{{ cliente.nombre }} {{ cliente.apellido }}</strong> <br>
+                            <span class="text-muted">DNI: {{ cliente.dni }}</span>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-center text-muted">No hay clientes asignados a este grupo.</p>
+        {% endif %}
+    </div>
+</div>
 {% endblock %}

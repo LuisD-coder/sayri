@@ -3,27 +3,70 @@
 {% block title %}Asignar Préstamos Individuales{% endblock %}
 
 {% block content %}
-    <h2>Asignar Préstamos Individuales para el Grupo: {{ prestamo_grupal.grupo.nombre }}</h2>
+<div class="container py-4">
+    <h2 class="text-center text-white bg-dark p-3 rounded shadow">
+        Asignar Préstamos Individuales - {{ prestamo_grupal.grupo.nombre }}
+    </h2>
 
-    <form method="POST">
-        {% for cliente in clientes %}
-        <div class="cliente-form mb-4">
-            <h3>{{ cliente.nombre }} {{ cliente.apellido }}</h3>
+    <form method="POST" id="prestamoForm">
+        <div class="row">
+            {% for cliente in clientes %}
+            <div class="col-md-6">
+                <div class="card shadow-sm p-4 mb-3 {% if cliente.prestamo_individual %} bg-light {% endif %}">
+                    <h4 class="text-primary text-center">{{ cliente.nombre }} {{ cliente.apellido }}</h4>
 
-            <div class="mb-3">
-                <label for="monto_cliente_{{ cliente.id }}" class="form-label">Monto de Préstamo:</label>
-                <input type="number" name="monto_cliente_{{ cliente.id }}" step="0.01" required class="form-control">
+                    {% if cliente.prestamo_individual %}
+                        <!-- Cliente con préstamo existente (Deshabilitado) -->
+                        <p class="text-center text-muted">Préstamo Actual: 
+                            <strong>S/ {{ cliente.prestamo_individual.monto }}</strong>
+                        </p>
+                        <div class="form-check text-center">
+                            <input type="checkbox" disabled class="form-check-input">
+                            <label class="form-check-label text-danger">Ya tiene un préstamo asignado</label>
+                        </div>
+                    {% else %}
+                        <!-- Cliente sin préstamo (Se puede asignar uno nuevo) -->
+                        <div class="form-check text-center">
+                            <input type="checkbox" name="clientes" value="{{ cliente.id }}" id="cliente_{{ cliente.id }}" 
+                                   class="form-check-input cliente-checkbox">
+                            <label for="cliente_{{ cliente.id }}" class="form-check-label fw-bold">Seleccionar cliente</label>
+                        </div>
+
+                        <div class="mb-3 monto-container" style="display: none;">
+                            <label for="monto_cliente_{{ cliente.id }}" class="form-label fw-bold">Monto de Préstamo:</label>
+                            <input type="number" name="monto_cliente_{{ cliente.id }}" step="0.01" 
+                                   class="form-control border-primary monto-input" disabled>
+                        </div>
+                    {% endif %}
+                </div>
             </div>
-
-            <div class="form-check">
-                <input type="checkbox" name="clientes" value="{{ cliente.id }}" id="cliente_{{ cliente.id }}" class="form-check-input">
-                <label for="cliente_{{ cliente.id }}" class="form-check-label">Seleccionar cliente</label>
-            </div>
+            {% endfor %}
         </div>
-        {% endfor %}
 
         <div class="text-center">
-            <button type="submit" class="btn btn-success mt-3">Asignar Préstamos</button>
+            <button type="submit" class="btn btn-success btn-lg mt-3 shadow">Asignar Préstamos</button>
         </div>
     </form>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        document.querySelectorAll(".cliente-checkbox").forEach(function(checkbox) {
+            checkbox.addEventListener("change", function() {
+                let montoContainer = this.closest(".card").querySelector(".monto-container");
+                let montoInput = montoContainer.querySelector(".monto-input");
+
+                if (this.checked) {
+                    montoContainer.style.display = "block";
+                    montoInput.required = true;
+                    montoInput.disabled = false;
+                } else {
+                    montoContainer.style.display = "none";
+                    montoInput.required = false;
+                    montoInput.disabled = true;
+                }
+            });
+        });
+    });
+</script>
 {% endblock %}
