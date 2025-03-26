@@ -30,7 +30,6 @@ def nuevo_prestamo_grupal():
         # ✅ Establecer monto_total en 0 al crear el préstamo grupal
         nuevo_prestamo_grupal = PrestamoGrupal(
             grupo_id=grupo_id,
-            monto_total=0,  # Se inicia en 0 y se actualizará después al asignar préstamos individuales
             fecha_desembolso=fecha_desembolso
         )
 
@@ -115,10 +114,13 @@ def asignar_prestamos_individuales(prestamo_grupal_id):
 
         # Actualizar monto_total del préstamo grupal
         prestamos_individuales = db.session.query(db.func.sum(PrestamoIndividual.monto)).filter_by(prestamo_grupal_id=prestamo_grupal.id).scalar() or 0
-        prestamo_grupal.monto_total = prestamos_individuales
+        # Solo usa la propiedad calculada, sin asignar directamente
+        prestamo_grupal.monto_total  # Solo accede, no asignes
 
         db.session.commit()
-        return redirect(url_for('prestamos_grupales.lista_prestamos_grupales'))
+        
+        # Redirigir a la lista de préstamos grupales con el grupo seleccionado
+        return redirect(url_for('prestamos_grupales.lista_prestamos_grupales', grupo_id=prestamo_grupal.grupo_id))
 
     return render_template('prestamos_grupales/asignar_prestamos_individuales.html', 
                            prestamo_grupal=prestamo_grupal, clientes=clientes)

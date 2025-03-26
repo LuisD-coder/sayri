@@ -11,6 +11,9 @@ class PrestamoIndividual(db.Model):
 
     # Relación con los pagos
     pagos = db.relationship('Pago', back_populates='prestamo_individual', lazy='subquery')  # Considerar 'subquery' si hay muchos pagos
+    # Relación con el préstamo grupal
+    prestamo_grupal = db.relationship('PrestamoGrupal', back_populates='prestamos_individuales')
+    
 
     @property
     def monto_pendiente(self):

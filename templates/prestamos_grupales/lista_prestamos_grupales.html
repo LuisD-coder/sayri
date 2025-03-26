@@ -3,8 +3,8 @@
 {% block title %}Lista de Préstamos Grupales{% endblock %}
 
 {% block content %}
-<div class="container" style="background-color: #f4f4f9; padding: 20px; border-radius: 8px;">
-    <h2 class="text-center my-4 text-dark">Lista de Préstamos Grupales</h2>
+<div class="container py-4">
+    <h2 class="text-center mb-4">Lista de Préstamos Grupales</h2>
 
     <!-- Botón para nuevo préstamo -->
     <div class="text-center mb-4">
@@ -15,7 +15,7 @@
     <form method="GET" action="{{ url_for('prestamos_grupales.lista_prestamos_grupales') }}" class="mb-4">
         <div class="row">
             <div class="col-md-6">
-                <label for="grupo_id" class="form-label text-dark">Selecciona un Grupo:</label>
+                <label for="grupo_id" class="form-label">Selecciona un Grupo:</label>
                 <select name="grupo_id" id="grupo_id" class="form-select" required>
                     <option value="" disabled selected>Elige un grupo</option>
                     {% for grupo in grupos %}
@@ -30,35 +30,30 @@
     </form>
 
     {% if prestamos_grupales %}
-        <div class="table-responsive">
-            <table class="table table-dark table-hover table-bordered">
-                <thead class="table-secondary text-dark">
-                    <tr>
-                        <th>Monto Total (S/)</th>
-                        <th>Fecha de Desembolso</th>
-                        <th>Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for prestamo in prestamos_grupales %}
-                        <tr>
-                            <td>S/ {{ prestamo.monto_total }}</td>
-                            <td>{{ prestamo.fecha_desembolso.strftime('%d/%m/%Y') }}</td>
-                            <td>
-                                <a href="{{ url_for('prestamos_grupales.prestamos_individuales', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-primary">
+        <div class="row">
+            {% for prestamo in prestamos_grupales %}
+                <div class="col-md-4">
+                    <div class="card shadow-sm mb-4">
+                        <div class="card-body">
+                            <h5 class="card-title text-primary">Préstamo Grupal</h5>
+                            <p class="card-text"><strong>Monto Total:</strong> S/ {{ prestamo.monto_total }}</p>
+                            <p class="card-text"><strong>Fecha de Desembolso:</strong> {{ prestamo.fecha_desembolso.strftime('%d/%m/%Y') }}</p>
+                            
+                            <div class="d-flex flex-wrap gap-2 mt-3">
+                                <a href="{{ url_for('prestamos_grupales.prestamos_individuales', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-outline-primary">
                                     <i class="bi bi-eye"></i> Ver P.I.
                                 </a>
-                                <a href="{{ url_for('prestamos_grupales.asignar_prestamos_individuales', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-success">
+                                <a href="{{ url_for('prestamos_grupales.asignar_prestamos_individuales', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-outline-success">
                                     <i class="bi bi-plus-circle"></i> Asignar P.I.
                                 </a>
-                                <a href="{{ url_for('prestamos_grupales.generar_contrato', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-warning">
+                                <a href="{{ url_for('prestamos_grupales.generar_contrato', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-outline-warning">
                                     <i class="bi bi-file-earmark-pdf"></i> Generar Contrato
                                 </a>
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
         </div>
     {% elif selected_grupo_id %}
         <p class="text-center text-muted">No hay préstamos registrados para este grupo.</p>
@@ -66,79 +61,48 @@
 </div>
 
 <style>
-    /* Botón de nuevo préstamo */
-    .btn-success {
+    .container {
+        max-width: 900px;
+        margin: auto;
+    }
+
+    .card {
+        border-radius: 8px;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-outline-primary:hover {
+        background-color: #007bff;
+        color: white;
+    }
+
+    .btn-outline-success:hover {
         background-color: #28a745;
         color: white;
-        padding: 12px 20px;
-        border-radius: 5px;
-        text-decoration: none;
-        font-weight: bold;
-        transition: background-color 0.3s;
-        margin-bottom: 20px;
     }
 
-    .btn-success:hover {
-        background-color: #218838;
+    .btn-outline-warning:hover {
+        background-color: #ffc107;
+        color: white;
     }
 
-    /* Estilos generales */
-    .container {
-        background-color: #f4f4f9;
-        padding: 20px;
-        border-radius: 8px;
-    }
-
-    .table-responsive {
-        margin-top: 30px;
-    }
-
-    .table {
-        width: 100%;
-        border-radius: 10px;
-        background: #fff;
-    }
-
-    .table th, .table td {
-        text-align: center;
-        padding: 12px;
-    }
-
-    .table-hover tbody tr:hover {
-        background-color: #f1f1f1;
-    }
-
-    /* Estilos del título */
     .text-center {
         text-align: center;
     }
 
-    .text-dark {
-        color: #333;
-    }
-
-    .my-4 {
-        margin-top: 20px;
-        margin-bottom: 20px;
-    }
-
-    /* Estilos del formulario */
-    .form-select {
-        font-size: 16px;
-        padding: 8px;
-        border-radius: 5px;
-    }
-
-    .btn-primary {
-        background-color: #007bff;
-        color: white;
+    .btn-success {
+        font-size: 18px;
         padding: 12px 20px;
-        border-radius: 5px;
-        text-decoration: none;
+        font-weight: bold;
     }
 
-    .btn-primary:hover {
-        background-color: #0056b3;
+    .gap-2 {
+        gap: 10px;
     }
 </style>
 

@@ -1,12 +1,17 @@
 from models import db
-from datetime import datetime
+from datetime import date
 
 class PrestamoGrupal(db.Model):
     __tablename__ = 'prestamogrupal'
     
     id = db.Column(db.Integer, primary_key=True)
     grupo_id = db.Column(db.Integer, db.ForeignKey('grupo.id'), nullable=False)
-    monto_total = db.Column(db.Float, nullable=True)
-    fecha_desembolso = db.Column(db.Date, nullable=False)  # Cambio a db.Date para solo almacenar la fecha
+    fecha_desembolso = db.Column(db.Date, nullable=False, default=date.today)  # Valor por defecto: hoy
 
-    prestamos_individuales = db.relationship('PrestamoIndividual', backref='prestamo_grupal', lazy=True)
+    # Relación con PrestamoIndividual
+    prestamos_individuales = db.relationship('PrestamoIndividual', back_populates='prestamo_grupal', lazy='subquery')
+
+    @property
+    def monto_total(self):
+        """Calcula automáticamente el monto total sumando los préstamos individuales."""
+        return sum(prestamo.monto for prestamo in self.prestamos_individuales) if self.prestamos_individuales else 0.0
