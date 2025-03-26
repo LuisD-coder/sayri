@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for
+from flask import Blueprint, render_template, request, redirect, url_for, flash
 from datetime import datetime, date
 from models import Pago, PrestamoIndividual, Cliente, Grupo, PrestamoGrupal
 from models import db
@@ -6,6 +6,10 @@ from decimal import Decimal
 
 # Crear un Blueprint para la gestión de pagos
 pagos_bp = Blueprint('pagos', __name__)
+
+# Definir constantes para el interés y los días de retraso
+INTERES_RETRASO = 0.05  # 5% de interés por retraso
+DIAS_RETRASO = 10  # Si el retraso es mayor a 10 días, se aplica interés
 
 @pagos_bp.route('/pagos', methods=['GET'])
 def lista_pagos():
@@ -20,11 +24,15 @@ def lista_pagos():
         if selected_grupo:
             prestamos_grupales = PrestamoGrupal.query.filter_by(grupo_id=selected_grupo.id).all()
 
+    # Pasar la fecha actual al template
+    current_date = datetime.today().date()
+
     return render_template(
         'pagos/pagos.html',
         grupos=grupos,
         selected_grupo=selected_grupo,
-        prestamos_grupales=prestamos_grupales
+        prestamos_grupales=prestamos_grupales,
+        current_date=current_date  # Fecha actual
     )
 
 
@@ -39,7 +47,7 @@ def agregar_pago(prestamo_id):
     fecha_pago_str = request.form['fecha_pago']
     fecha_pago = datetime.strptime(fecha_pago_str, '%Y-%m-%d').date()
 
-    # Obtener el estado del pago desde el formulario
+    # Obtener el estado del pago desde el formulario (dependiendo de la opción del cliente)
     estado_pago = request.form['estado_pago']
 
     # Verificar si ya existe un pago para esa fecha
@@ -66,13 +74,15 @@ def agregar_pago(prestamo_id):
     # Recalcular monto pendiente
     monto_pendiente = prestamo.monto - prestamo.monto_pagado
 
-    # Actualizar estado del pago
-    if monto_pendiente <= 0:
+    # El estado depende de la opción seleccionada por el cliente
+    if estado_pago == "Pagado":
         pago_existente.estado = "Pagado"
-        prestamo.monto_pagado = prestamo.monto  # Asegurar que no sobrepase
-    elif fecha_pago < datetime.today().date():
+        # Asegurarse de que el monto pagado no sobrepase el monto total
+        if prestamo.monto_pagado > prestamo.monto:
+            prestamo.monto_pagado = prestamo.monto
+    elif estado_pago == "Atrasado":
         pago_existente.estado = "Atrasado"
-    else:
+    else:  # En caso de que el estado sea "Pendiente"
         pago_existente.estado = "Pendiente"
 
     # Guardar cambios en la base de datos

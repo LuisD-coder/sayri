@@ -53,18 +53,17 @@
                                             <select name="fecha_pago" class="form-select" required>
                                                 <option value="">Selecciona una fecha</option>
                                                 {% for pago in prestamo.pagos %}
-    <option value="{{ pago.fecha_pago.strftime('%Y-%m-%d') }}" {% if pago.estado == 'Pagado' %}disabled{% endif %}>
-        {{ pago.fecha_pago.strftime('%d/%m/%Y') }} 
-        {% if pago.estado == 'Pagado' %}
-            (Pagado)
-        {% elif pago.estado == 'Pendiente' %}
-            (Pendiente)
-        {% elif pago.estado == 'Atrasado' %}
-            (Atrasado)
-        {% endif %}
-    </option>
-{% endfor %}
-
+                                                    <option value="{{ pago.fecha_pago.strftime('%Y-%m-%d') }}" {% if pago.estado == 'Pagado' %}disabled{% endif %}>
+                                                        {{ pago.fecha_pago.strftime('%d/%m/%Y') }} 
+                                                        {% if pago.estado == 'Pagado' %}
+                                                            (Pagado)
+                                                        {% elif pago.estado == 'Pendiente' %}
+                                                            (Pendiente)
+                                                        {% elif pago.estado == 'Atrasado' %}
+                                                            (Atrasado)
+                                                        {% endif %}
+                                                    </option>
+                                                {% endfor %}
                                             </select>
                                         </div>
 
@@ -87,6 +86,24 @@
                                         </div>
                                     </div>
                                 </form>
+
+                                <!-- Mostrar los días de retraso solo si el pago está atrasado -->
+                                {% for pago in prestamo.pagos %}
+                                    {% if pago.estado == 'Atrasado' %}
+                                        <p class="mb-1 text-danger"><strong>Días de Retraso:</strong> 
+                                            {% if current_date and pago.fecha_pago %}
+                                                {{ (current_date - pago.fecha_pago).days }} días
+                                            {% else %}
+                                                No disponible
+                                            {% endif %}
+                                        </p>
+                                    {% endif %}
+
+                                    <!-- No mostrar días de retraso si el pago ya está pagado -->
+                                    {% if pago.estado == 'Pagado' %}
+                                        <p class="mb-1 text-success"><strong>Pago Realizado:</strong> El pago fue realizado con éxito.</p>
+                                    {% endif %}
+                                {% endfor %}
                             </div>
                         </div>
                     {% endfor %}
