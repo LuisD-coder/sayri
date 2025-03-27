@@ -3,6 +3,7 @@ from datetime import datetime, date
 from models import Pago, PrestamoIndividual, Cliente, Grupo, PrestamoGrupal
 from models import db
 from decimal import Decimal
+from flask_login import login_required
 
 # Crear un Blueprint para la gestión de pagos
 pagos_bp = Blueprint('pagos', __name__)
@@ -12,6 +13,7 @@ INTERES_RETRASO = 0.05  # 5% de interés por retraso
 DIAS_RETRASO = 10  # Si el retraso es mayor a 10 días, se aplica interés
 
 @pagos_bp.route('/pagos', methods=['GET'])
+@login_required
 def lista_pagos():
     grupos = Grupo.query.all()
     grupo_id = request.args.get('grupo_id')
@@ -37,6 +39,7 @@ def lista_pagos():
 
 
 @pagos_bp.route('/agregar_pago/<int:prestamo_id>', methods=['POST'])
+@login_required
 def agregar_pago(prestamo_id):
     prestamo = PrestamoIndividual.query.get_or_404(prestamo_id)
 

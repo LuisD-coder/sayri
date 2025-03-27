@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import fitz
 import zipfile
 from werkzeug.utils import secure_filename
+from flask_login import login_required
 import os
 from io import BytesIO
 import io
@@ -16,6 +17,7 @@ prestamos_grupales_bp = Blueprint('prestamos_grupales', __name__, url_prefix='/p
 
 # Crear un nuevo préstamo grupal
 @prestamos_grupales_bp.route('/nuevo', methods=['GET', 'POST'])
+@login_required
 def nuevo_prestamo_grupal():
     if request.method == 'POST':
         grupo_id = request.form['grupo_id']
@@ -47,6 +49,7 @@ def nuevo_prestamo_grupal():
 
 
 @prestamos_grupales_bp.route('/', methods=['GET'])
+@login_required
 def lista_prestamos_grupales():
     grupo_id = request.args.get('grupo_id', type=int)
 
@@ -67,6 +70,7 @@ def lista_prestamos_grupales():
 
 # Asignar préstamos individuales a los clientes dentro de un préstamo grupal
 @prestamos_grupales_bp.route('/<int:prestamo_grupal_id>/asignar_prestamos_individuales', methods=['GET', 'POST'])
+@login_required
 def asignar_prestamos_individuales(prestamo_grupal_id):
     prestamo_grupal = PrestamoGrupal.query.get_or_404(prestamo_grupal_id)
     clientes = prestamo_grupal.grupo.clientes  
@@ -129,6 +133,7 @@ def asignar_prestamos_individuales(prestamo_grupal_id):
 
 
 @prestamos_grupales_bp.route('/<int:prestamo_grupal_id>/prestamos_individuales')
+@login_required
 def prestamos_individuales(prestamo_grupal_id):
     # Obtener el préstamo grupal
     prestamo_grupal = PrestamoGrupal.query.get_or_404(prestamo_grupal_id)
@@ -149,6 +154,7 @@ def prestamos_individuales(prestamo_grupal_id):
 
 
 @prestamos_grupales_bp.route('/grupo/<int:grupo_id>/prestamos')
+@login_required
 def prestamos_por_grupo(grupo_id):
     # Filtrar los préstamos grupales por el grupo seleccionado
     prestamos_grupales = PrestamoGrupal.query.filter_by(grupo_id=grupo_id).all()
@@ -162,6 +168,7 @@ def prestamos_por_grupo(grupo_id):
 
 
 @prestamos_grupales_bp.route('/descargar_contrato/<int:contrato_id>')
+@login_required
 def descargar_contrato(contrato_id):
     contrato = Contrato.query.get_or_404(contrato_id)
     
@@ -175,6 +182,7 @@ def descargar_contrato(contrato_id):
 
 
 @prestamos_grupales_bp.route('/generar_contrato/<int:prestamo_grupal_id>', methods=['GET'])
+@login_required
 def generar_contrato(prestamo_grupal_id):
     # Obtener el préstamo grupal
     prestamo_grupal = PrestamoGrupal.query.get_or_404(prestamo_grupal_id)

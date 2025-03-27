@@ -1,11 +1,13 @@
 from flask import Blueprint, render_template, request, redirect, url_for
 from models import db, Grupo, Cliente, PrestamoGrupal
 from datetime import datetime
+from flask_login import login_required
 
 grupos_bp = Blueprint('grupos', __name__, url_prefix='/grupos')
 
 # Crear un nuevo grupo
 @grupos_bp.route('/nuevo', methods=['GET', 'POST'])
+@login_required
 def nuevo_grupo():
     if request.method == 'POST':
         nombre = request.form['nombre']
@@ -18,12 +20,14 @@ def nuevo_grupo():
 
 # Listar todos los grupos
 @grupos_bp.route('/')
+@login_required
 def lista_grupos():
     grupos = Grupo.query.all()
     return render_template('grupos/lista_grupos.html', grupos=grupos)
 
 
 @grupos_bp.route('/<int:grupo_id>/asignar_clientes', methods=['GET', 'POST'])
+@login_required
 def asignar_clientes(grupo_id):
     grupo = Grupo.query.get_or_404(grupo_id)
 

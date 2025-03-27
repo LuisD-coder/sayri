@@ -18,7 +18,7 @@
 
     <header class="navbar navbar-expand-lg navbar-dark bg-black shadow">
         <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="#">Sistema de Gestión</a>
+            <a class="navbar-brand fw-bold" href="/">Microfinanciera Sayri</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -36,6 +36,11 @@
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('pagos.lista_pagos') }}"><i class="bi bi-credit-card"></i> Pagos</a>
                     </li>
+                    {% if current_user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('login.logout') }}"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</a>
+                        </li>
+                    {% endif %}
                 </ul>
             </div>
         </div>

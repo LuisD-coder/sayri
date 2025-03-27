@@ -1,10 +1,12 @@
 from flask import Blueprint, render_template, request, redirect, url_for
 from models import db, Cliente, Grupo, PrestamoGrupal, PrestamoIndividual
+from flask_login import login_required
 
 clientes_bp = Blueprint('clientes', __name__, url_prefix='/clientes')
 
 # Crear un nuevo cliente
 @clientes_bp.route('/nuevo', methods=['GET', 'POST'])
+@login_required
 def nuevo_cliente():
     grupos = Grupo.query.all()
     
@@ -38,6 +40,7 @@ def nuevo_cliente():
 
 # Listar todos los clientes
 @clientes_bp.route('/')
+@login_required
 def lista_clientes():
     page = request.args.get('page', 1, type=int)
     grupo_id = request.args.get('grupo_id', type=int)
@@ -54,6 +57,7 @@ def lista_clientes():
 
 
 @clientes_bp.route('/<int:cliente_id>')
+@login_required
 def detalle_cliente(cliente_id):
     cliente = Cliente.query.get_or_404(cliente_id)
     
