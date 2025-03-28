@@ -15,6 +15,8 @@
         {% for grupo in grupos %}
             <div class="grupo-card">
                 <h3>{{ grupo.nombre }}</h3>
+                <p class="prestamos-count"><strong>Préstamos Grupales:</strong> {{ grupo.prestamos_grupales|length }}</p>
+                <p class="clientes-count"><strong>Clientes Asignados:</strong> {{ grupo.clientes|length }}</p>
                 <div class="grupo-actions">
                     <a href="{{ url_for('grupos.asignar_clientes', grupo_id=grupo.id) }}" class="btn btn-assign">Asignar Clientes</a>
                     <a href="{{ url_for('prestamos_grupales.prestamos_por_grupo', grupo_id=grupo.id) }}" class="btn btn-view">Ver Préstamos</a>
@@ -78,6 +80,20 @@
         .grupo-card h3 {
             font-size: 20px;
             color: #333;
+            margin-bottom: 20px;
+        }
+
+        /* Contador de préstamos grupales */
+        .prestamos-count {
+            color: #000000; /* Cambia el color aquí, elige el que te guste */
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        /* Contador de clientes asignados */
+        .clientes-count {
+            color: #000000; /* Puedes cambiar el color según lo que prefieras */
+            font-size: 16px;
             margin-bottom: 20px;
         }
 

@@ -15,7 +15,6 @@ from sqlalchemy import asc, desc
 
 prestamos_grupales_bp = Blueprint('prestamos_grupales', __name__, url_prefix='/prestamos_grupales')
 
-# Crear un nuevo préstamo grupal
 @prestamos_grupales_bp.route('/nuevo', methods=['GET', 'POST'])
 @login_required
 def nuevo_prestamo_grupal():
@@ -40,7 +39,7 @@ def nuevo_prestamo_grupal():
         db.session.commit()
 
         flash("Préstamo grupal creado exitosamente.", "success")
-        return redirect(url_for('prestamos_grupales.lista_prestamos_grupales'))
+        return redirect(url_for('prestamos_grupales.lista_prestamos_grupales', grupo_id=grupo_id))
 
     # Obtener todos los grupos para mostrar en la plantilla
     grupos = Grupo.query.all()
