@@ -238,21 +238,18 @@ def generar_contrato_logic(cliente_id, prestamo_grupal):
     # Obtener el cliente por su ID
     cliente = Cliente.query.get_or_404(cliente_id)
 
-    # Obtener el monto del préstamo individual asignado a este cliente
-    monto_cliente = None
-    prestamo_individual = None  # Variable para almacenar el prestamo individual
+    # Obtener el préstamo individual correcto dentro del préstamo grupal
+    prestamo_individual = None  
 
     for prestamo in prestamo_grupal.prestamos_individuales:
         if prestamo.cliente_id == cliente.id:
-            monto_cliente = prestamo.monto
-            prestamo_individual = prestamo  # Asignamos el prestamo_individual
+            prestamo_individual = prestamo  
             break
 
-    if monto_cliente is None or prestamo_individual is None:
-        raise ValueError(f"No se encontró el monto de préstamo para el cliente {cliente.nombre} {cliente.apellido}.")
+    if prestamo_individual is None:
+        raise ValueError(f"No se encontró el préstamo para el cliente {cliente.nombre} {cliente.apellido} en este préstamo grupal.")
 
-    # Redondear el monto del préstamo para evitar decimales en el nombre del archivo
-    monto_cliente = round(monto_cliente)
+    monto_cliente = round(prestamo_individual.monto)
 
     contrato_path = f"static/contrato_preformateado{monto_cliente}.pdf"
     
@@ -261,11 +258,13 @@ def generar_contrato_logic(cliente_id, prestamo_grupal):
     
     doc = fitz.open(contrato_path)
 
-    # Obtener las primeras 4 fechas de pago del cliente, si existen
-    pagos = Pago.query.filter_by(cliente_id=cliente.id).order_by(Pago.fecha_pago).limit(4).all()
+    # Obtener las fechas de pago solo del préstamo individual correcto
+    pagos = Pago.query.filter_by(cliente_id=cliente.id, prestamo_individual_id=prestamo_individual.id) \
+                      .order_by(Pago.fecha_pago).limit(4).all()
+
     fechas_pago = [pago.fecha_pago.strftime('%d/%m/%Y') for pago in pagos]
 
-    # Asegurarse de que haya 4 fechas, rellenando con "N/A" si es necesario
+    # Asegurar que haya 4 fechas, rellenando con "N/A" si es necesario
     while len(fechas_pago) < 4:
         fechas_pago.append("N/A")
 
@@ -273,16 +272,16 @@ def generar_contrato_logic(cliente_id, prestamo_grupal):
     datos_cliente = {
         "NOMBRE": cliente.nombre.upper(),
         "APELLIDO": cliente.apellido.upper(),
-        "DNI":cliente.dni,
-        "PRESTAMO": f"{monto_cliente} soles",
+        "DNI": cliente.dni,
+        "PRESTAMO": f"{monto_cliente}",
         "FECHA_DSB": prestamo_grupal.fecha_desembolso.strftime('%d/%m/%Y'),
-        "FECHA_1": fechas_pago[0],  # Primer fecha de pago
-        "FECHA_2": fechas_pago[1],  # Segunda fecha de pago
-        "FECHA_3": fechas_pago[2],  # Tercera fecha de pago
-        "FECHA_4": fechas_pago[3]   # Cuarta fecha de pago
+        "FECHA_1": fechas_pago[0],
+        "FECHA_2": fechas_pago[1],
+        "FECHA_3": fechas_pago[2],
+        "FECHA_4": fechas_pago[3]
     }
 
-    # Reemplazar los marcadores de texto
+    # Reemplazo en el documento PDF
     for page in doc:
         text_instances = []
         for tag, value in datos_cliente.items():
@@ -297,25 +296,23 @@ def generar_contrato_logic(cliente_id, prestamo_grupal):
             page.draw_rect(rect, color=(1, 1, 1), fill=(1, 1, 1))
             
             # Escribir el nuevo texto en la misma posición
-            page.insert_text((x, y + height * 0.8), value, fontsize=10, color=(0, 0, 0))
+            page.insert_text((x, y + height * 0.8), value, fontsize=9, color=(0, 0, 0))
 
-    # Guardar el contrato modificado en un buffer en lugar de en un archivo
+    # Guardar el contrato en memoria y en la base de datos
     buffer = io.BytesIO()
     doc.save(buffer)
     buffer.seek(0)
 
-    # Crear una nueva instancia de Contrato y guardar el contrato en la base de datos
     nombre_archivo = f"contrato_{cliente.nombre.upper()}_{cliente.apellido.upper()}_{monto_cliente}.pdf"
     
     nuevo_contrato = Contrato(
         nombre_archivo=nombre_archivo,
         archivo=buffer.getvalue(),
         cliente_id=cliente.id,
-        prestamo_individual_id=prestamo_individual.id  # Asignar el prestamo_individual_id
+        prestamo_individual_id=prestamo_individual.id
     )
     
     db.session.add(nuevo_contrato)
     db.session.commit()
 
-    # Retornar el archivo generado para que el usuario lo descargue
     return send_file(buffer, as_attachment=True, download_name=nombre_archivo, mimetype='application/pdf')
