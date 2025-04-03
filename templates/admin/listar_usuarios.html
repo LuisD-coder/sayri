@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Lista de Usuarios{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Usuarios</h2>
+
+<!-- Estilos CSS personalizados -->
+<style>
+    /* Personalización de la tarjeta */
+    .card {
+        border-radius: 10px; /* Bordes redondeados */
+        background-color: #f8f9fa; /* Fondo claro */
+    }
+
+    .card-header {
+        border-radius: 10px 10px 0 0;
+        background-color: #007bff; /* Color de fondo azul */
+        color: white; /* Texto blanco */
+    }
+
+    .card-footer {
+        background-color: #f8f9fa;
+        border-radius: 0 0 10px 10px;
+    }
+
+    .card-body {
+        background-color: #ffffff; /* Fondo blanco */
+        padding: 1.25rem;
+    }
+
+    .card-title {
+        font-size: 1.25rem;
+        font-weight: bold;
+    }
+
+    /* Botones personalizados */
+    .btn-sm {
+        padding: 0.375rem 0.75rem; /* Tamaño de los botones */
+        font-size: 0.875rem;
+    }
+
+    /* Botón Crear Usuario */
+    .mt-4 .btn-primary {
+        padding: 0.75rem 1.25rem;
+        font-size: 1rem;
+        border-radius: 5px;
+    }
+</style>
+
+<!-- Tarjetas para cada usuario -->
+<div class="row">
+    {% for usuario in usuarios %}
+        <div class="col-md-4 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title">{{ usuario.nombre }} {{ usuario.apellido }}</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Email:</strong> {{ usuario.email }}</p>
+                    <p><strong>Rol:</strong> {{ usuario.rol.nombre }}</p>
+                </div>
+                <div class="card-footer text-end">
+                    <!-- Botón Editar -->
+                    <a href="{{ url_for('admin.editar_usuario', id=usuario.id) }}" class="btn btn-warning btn-sm">Editar</a>
+
+                    <!-- Botón Eliminar (con confirmación) -->
+                    <form action="{{ url_for('admin.eliminar_usuario', id=usuario.id) }}" method="POST" style="display:inline;" 
+                          onsubmit="return confirm('¿Estás seguro de eliminar este usuario?');">
+                        <button type="submit" class="btn btn-danger btn-sm">Eliminar</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+
+<!-- Botón Crear Usuario -->
+<div class="mt-4">
+    <a href="{{ url_for('admin.crear_usuario') }}" class="btn btn-primary">Crear Usuario</a>
+</div>
+{% endblock %}

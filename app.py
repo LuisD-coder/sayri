@@ -23,7 +23,7 @@ def create_app():
     # Definir la función user_loader
     @login_manager.user_loader
     def load_user(user_id):
-        return Usuario.query.get(int(user_id))  # Asegúrate de que estás obteniendo al usuario de la base de datos
+        return db.session.get(Usuario, int(user_id))  # Asegúrate de que estás obteniendo al usuario de la base de datos
 
     register_routes(app)
 

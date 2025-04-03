@@ -25,26 +25,51 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('clientes.lista_clientes') }}"><i class="bi bi-people"></i> Clientes</a>
+                        <a class="nav-link" href="{{ url_for('clientes.lista_clientes') }}">
+                            <i class="bi bi-people"></i> Clientes
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('grupos.lista_grupos') }}"><i class="bi bi-folder"></i> Grupos</a>
+                        <a class="nav-link" href="{{ url_for('grupos.lista_grupos') }}">
+                            <i class="bi bi-folder"></i> Grupos
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('prestamos_grupales.lista_prestamos_grupales') }}"><i class="bi bi-cash-coin"></i> Préstamos</a>
+                        <a class="nav-link" href="{{ url_for('prestamos_grupales.lista_prestamos_grupales') }}">
+                            <i class="bi bi-cash-coin"></i> Préstamos
+                        </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{{ url_for('pagos.lista_pagos') }}"><i class="bi bi-credit-card"></i> Pagos</a>
+                        <a class="nav-link" href="{{ url_for('pagos.lista_pagos') }}">
+                            <i class="bi bi-credit-card"></i> Pagos
+                        </a>
                     </li>
+    
+                    {% if current_user.is_authenticated and current_user.rol.nombre == 'admin' %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('admin.listar_usuarios') }}">
+                                <i class="bi bi-person-lines-fill"></i> Listar Usuarios
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{{ url_for('admin.crear_usuario') }}">
+                                <i class="bi bi-person-plus-fill"></i> Crear Usuario
+                            </a>
+                        </li>
+                    {% endif %}
+    
                     {% if current_user.is_authenticated %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{{ url_for('login.logout') }}"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</a>
+                            <a class="nav-link" href="{{ url_for('login.logout') }}">
+                                <i class="bi bi-box-arrow-right"></i> Cerrar sesión
+                            </a>
                         </li>
                     {% endif %}
                 </ul>
             </div>
         </div>
     </header>
+    
 
     <main class="container mt-4">
         {% block content %}{% endblock %}

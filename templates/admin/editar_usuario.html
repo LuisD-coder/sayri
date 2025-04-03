@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Usuario{% endblock %}
+
+{% block content %}
+<h2 class="mb-4">Editar Usuario</h2>
+
+<!-- Estilos CSS personalizados -->
+<style>
+    /* Estilo general del formulario */
+    form {
+        background-color: #f8f9fa;
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    label {
+        font-weight: bold;
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #343a40; /* Color oscuro para los labels */
+    }
+
+    input, select {
+        width: 100%;
+        padding: 0.75rem;
+        margin-bottom: 1rem;
+        border-radius: 5px;
+        border: 1px solid #ced4da;
+        background-color: #ffffff;
+    }
+
+    input:focus, select:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+    }
+
+    button {
+        padding: 0.75rem 1.25rem;
+        font-size: 1rem;
+        border-radius: 5px;
+        background-color: #28a745;
+        color: white;
+        border: none;
+        width: 100%;
+        cursor: pointer;
+    }
+
+    button:hover {
+        background-color: #218838;
+    }
+
+    .form-container {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .back-btn {
+        margin-top: 1rem;
+        display: inline-block;
+        padding: 0.75rem 1.25rem;
+        background-color: #6c757d;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+    }
+
+    .back-btn:hover {
+        background-color: #5a6268;
+    }
+</style>
+
+<!-- Contenedor del formulario -->
+<div class="form-container">
+    <form method="POST">
+        <label for="nombre">Nombre:</label>
+        <input type="text" name="nombre" value="{{ usuario.nombre }}" required>
+
+        <label for="apellido">Apellido:</label>
+        <input type="text" name="apellido" value="{{ usuario.apellido }}" required>
+
+        <label for="email">Email:</label>
+        <input type="email" name="email" value="{{ usuario.email }}" required>
+
+        <label for="rol_id">Rol:</label>
+        <select name="rol_id" required>
+            {% for rol in roles %}
+                <option value="{{ rol.id }}" {% if usuario.rol_id == rol.id %}selected{% endif %}>{{ rol.nombre }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="password">Nueva Contraseña (opcional):</label>
+        <input type="password" name="password">
+
+        <button type="submit">Guardar Cambios</button>
+    </form>
+
+    <!-- Botón para volver a la lista de usuarios -->
+    <a href="{{ url_for('admin.listar_usuarios') }}" class="back-btn">Volver</a>
+</div>
+{% endblock %}

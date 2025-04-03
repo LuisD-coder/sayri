@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2 class="mb-4">Crear Nuevo Usuario</h2>
+
+<!-- Estilos CSS personalizados -->
+<style>
+    /* Estilo general del formulario */
+    form {
+        background-color: #f8f9fa;
+        padding: 2rem;
+        border-radius: 10px;
+        box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    label {
+        font-weight: bold;
+        display: block;
+        margin-bottom: 0.5rem;
+        color: #343a40; /* Color oscuro para los labels */
+    }
+
+    input, select {
+        width: 100%;
+        padding: 0.75rem;
+        margin-bottom: 1rem;
+        border-radius: 5px;
+        border: 1px solid #ced4da;
+        background-color: #ffffff;
+    }
+
+    input:focus, select:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+    }
+
+    button {
+        padding: 0.75rem 1.25rem;
+        font-size: 1rem;
+        border-radius: 5px;
+        background-color: #007bff;
+        color: white;
+        border: none;
+        width: 100%;
+        cursor: pointer;
+    }
+
+    button:hover {
+        background-color: #0056b3;
+    }
+
+    .form-container {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+</style>
+
+<!-- Contenedor del formulario -->
+<div class="form-container">
+    <form method="POST">
+        <label for="nombre">Nombre:</label>
+        <input type="text" name="nombre" id="nombre" required>
+
+        <label for="apellido">Apellido:</label>
+        <input type="text" name="apellido" id="apellido" required>
+
+        <label for="email">Email:</label>
+        <input type="email" name="email" id="email" required>
+
+        <label for="password">Contraseña:</label>
+        <input type="password" name="password" id="password" required>
+
+        <label for="rol_id">Rol:</label>
+        <select name="rol_id" id="rol_id">
+            {% for rol in roles %}
+                <option value="{{ rol.id }}">{{ rol.nombre }}</option>
+            {% endfor %}
+        </select>
+
+        <button type="submit">Crear Usuario</button>
+    </form>
+</div>
+{% endblock %}
