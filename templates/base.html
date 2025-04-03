@@ -72,7 +72,45 @@
     
 
     <main class="container mt-4">
-        {% block content %}{% endblock %}
+        {% block content %}
+        <div class="row">
+            <!-- Pagos Próximos -->
+            <div class="col-md-4">
+                <div class="card shadow-lg bg-success text-white mb-3">
+                    <div class="card-header text-center fw-bold">
+                        <i class="bi bi-clock-history"></i> Pagos Próximos
+                    </div>
+                    <div class="card-body text-center">
+                        <p>Aquí se mostrarán los pagos próximos...</p>
+                    </div>
+                </div>
+            </div>
+    
+            <!-- Pagos Vencidos -->
+            <div class="col-md-4">
+                <div class="card shadow-lg bg-danger text-white mb-3">
+                    <div class="card-header text-center fw-bold">
+                        <i class="bi bi-exclamation-triangle"></i> Pagos Vencidos
+                    </div>
+                    <div class="card-body text-center">
+                        <p>Aquí se mostrarán los pagos vencidos...</p>
+                    </div>
+                </div>
+            </div>
+    
+            <!-- Información Extra -->
+            <div class="col-md-4">
+                <div class="card shadow-lg bg-primary text-white mb-3">
+                    <div class="card-header text-center fw-bold">
+                        <i class="bi bi-info-circle"></i> Información Extra
+                    </div>
+                    <div class="card-body text-center">
+                        <p>Aquí irá otra información importante...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endblock %}
     </main>
 
     <footer class="text-center text-muted py-3">

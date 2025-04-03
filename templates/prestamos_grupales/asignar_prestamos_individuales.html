@@ -34,8 +34,9 @@
 
                         <div class="mb-3 monto-container" style="display: none;">
                             <label for="monto_cliente_{{ cliente.id }}" class="form-label fw-bold">Monto de Préstamo:</label>
-                            <input type="number" name="monto_cliente_{{ cliente.id }}" step="0.01" 
-                                   class="form-control border-primary monto-input" disabled>
+                            <input type="number" name="monto_cliente_{{ cliente.id }}" id="monto_cliente_{{ cliente.id }}" 
+                                   class="form-control border-primary monto-input" disabled required>
+                            <small class="text-danger d-none" id="error_{{ cliente.id }}">Debe ser un monto entre 500 y 1500 en incrementos de 100.</small>
                         </div>
                     {% endif %}
                 </div>
@@ -55,15 +56,33 @@
             checkbox.addEventListener("change", function() {
                 let montoContainer = this.closest(".card").querySelector(".monto-container");
                 let montoInput = montoContainer.querySelector(".monto-input");
+                let errorText = montoContainer.querySelector("small");
 
                 if (this.checked) {
                     montoContainer.style.display = "block";
-                    montoInput.required = true;
                     montoInput.disabled = false;
+                    montoInput.required = true;
                 } else {
                     montoContainer.style.display = "none";
-                    montoInput.required = false;
                     montoInput.disabled = true;
+                    montoInput.required = false;
+                    montoInput.value = ""; // Limpiar valor si se deselecciona
+                    errorText.classList.add("d-none");
+                }
+            });
+        });
+
+        document.querySelectorAll(".monto-input").forEach(function(input) {
+            input.addEventListener("input", function() {
+                let monto = parseInt(this.value);
+                let errorText = document.getElementById("error_" + this.id.split("_")[2]);
+
+                if (isNaN(monto) || monto < 500 || monto > 1500 || monto % 100 !== 0) {
+                    errorText.classList.remove("d-none");
+                    this.setCustomValidity("Monto inválido");
+                } else {
+                    errorText.classList.add("d-none");
+                    this.setCustomValidity("");
                 }
             });
         });
