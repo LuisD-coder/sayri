@@ -9,7 +9,8 @@ class PrestamoGrupal(db.Model):
     fecha_desembolso = db.Column(db.Date, nullable=False, default=date.today)  # Valor por defecto: hoy
 
     # Relación con PrestamoIndividual
-    prestamos_individuales = db.relationship('PrestamoIndividual', back_populates='prestamo_grupal', lazy='subquery')
+    prestamos_individuales = db.relationship('PrestamoIndividual', back_populates='prestamo_grupal', cascade='all, delete-orphan', lazy='subquery')
+
 
     @property
     def monto_total(self):

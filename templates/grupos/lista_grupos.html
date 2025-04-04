@@ -17,9 +17,17 @@
                 <h3>{{ grupo.nombre }}</h3>
                 <p class="prestamos-count"><strong>Préstamos Grupales:</strong> {{ grupo.prestamos_grupales|length }}</p>
                 <p class="clientes-count"><strong>Clientes Asignados:</strong> {{ grupo.clientes|length }}</p>
+                
                 <div class="grupo-actions">
                     <a href="{{ url_for('grupos.asignar_clientes', grupo_id=grupo.id) }}" class="btn btn-assign">Asignar Clientes</a>
                     <a href="{{ url_for('prestamos_grupales.prestamos_por_grupo', grupo_id=grupo.id) }}" class="btn btn-view">Ver Préstamos</a>
+
+                    <!-- Botón de eliminar con confirmación -->
+                    <form action="{{ url_for('grupos.eliminar_grupo', grupo_id=grupo.id) }}" method="POST" class="delete-form">
+                        <button type="submit" class="btn btn-delete" onclick="return confirm('¿Estás seguro de eliminar este grupo? Esta acción no se puede deshacer.');">
+                            <i class="bi bi-trash"></i> Eliminar
+                        </button>
+                    </form>
                 </div>
             </div>
         {% endfor %}
@@ -84,33 +92,29 @@
         }
 
         /* Contador de préstamos grupales */
-        .prestamos-count {
-            color: #000000; /* Cambia el color aquí, elige el que te guste */
+        .prestamos-count, .clientes-count {
+            color: #000000;
             font-size: 16px;
             margin-bottom: 10px;
-        }
-
-        /* Contador de clientes asignados */
-        .clientes-count {
-            color: #000000; /* Puedes cambiar el color según lo que prefieras */
-            font-size: 16px;
-            margin-bottom: 20px;
         }
 
         /* Acciones */
         .grupo-actions {
             display: flex;
             justify-content: center;
-            gap: 15px;
+            gap: 10px;
+            flex-wrap: wrap;
         }
 
         /* Estilos de los botones */
         .btn {
-            padding: 10px 20px;
+            padding: 10px 15px;
             border-radius: 5px;
             text-decoration: none;
             font-weight: bold;
             transition: background-color 0.3s;
+            border: none;
+            cursor: pointer;
         }
 
         .btn-assign {
@@ -131,10 +135,24 @@
             background: #0056b3;
         }
 
+        .btn-delete {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #c82333;
+        }
+
+        /* Ajuste del formulario de eliminación */
+        .delete-form {
+            display: inline-block;
+        }
+
         /* Adaptación para dispositivos móviles */
         @media screen and (max-width: 768px) {
             .grupos-grid {
-                grid-template-columns: 1fr; /* 1 columna en móviles */
+                grid-template-columns: 1fr;
             }
         }
     </style>

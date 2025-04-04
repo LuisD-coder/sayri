@@ -10,7 +10,7 @@ class PrestamoIndividual(db.Model):
     monto = db.Column(db.Float, nullable=False)
 
     # Relación con los pagos
-    pagos = db.relationship('Pago', back_populates='prestamo_individual', lazy='subquery')  # Considerar 'subquery' si hay muchos pagos
+    pagos = db.relationship('Pago', back_populates='prestamo_individual', cascade='all, delete-orphan', lazy='subquery')  # Considerar 'subquery' si hay muchos pagos
     # Relación con el préstamo grupal
     prestamo_grupal = db.relationship('PrestamoGrupal', back_populates='prestamos_individuales')
     

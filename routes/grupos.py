@@ -1,7 +1,9 @@
-from flask import Blueprint, render_template, request, redirect, url_for
-from models import db, Grupo, Cliente, PrestamoGrupal
+from flask import Blueprint, render_template, request, redirect, url_for, flash, abort
+from models import db, Grupo, Cliente, PrestamoGrupal,PrestamoIndividual,Pago,Contrato
 from datetime import datetime
-from flask_login import login_required
+from flask_login import login_required, current_user
+from sqlalchemy.orm import session
+
 
 grupos_bp = Blueprint('grupos', __name__, url_prefix='/grupos')
 
@@ -63,3 +65,58 @@ def asignar_clientes(grupo_id):
         clientes_disponibles=clientes_disponibles,
         filtro=filtro
     )
+
+
+@grupos_bp.route('/<int:grupo_id>/eliminar', methods=['POST'])
+@login_required
+def eliminar_grupo(grupo_id):
+    # Verificar si el usuario tiene los roles permitidos
+    if current_user.rol not in ['admin', 'manager']:
+        abort(403)  # Denegar acceso (403 Forbidden)
+
+    grupo = Grupo.query.get_or_404(grupo_id)
+
+    try:
+        with db.session.no_autoflush:  # Prevenir autoflush conflictivo
+            # Obtener todos los préstamos grupales del grupo
+            prestamos_grupales = PrestamoGrupal.query.filter_by(grupo_id=grupo.id).all()
+
+            for prestamo_grupal in prestamos_grupales:
+                # Obtener todos los préstamos individuales del préstamo grupal
+                prestamos_individuales = PrestamoIndividual.query.filter_by(prestamo_grupal_id=prestamo_grupal.id).all()
+                for prestamo_individual in prestamos_individuales:
+                    # Eliminar contratos asociados al préstamo individual
+                    contratos = Contrato.query.filter_by(prestamo_individual_id=prestamo_individual.id).all()
+                    for contrato in contratos:
+                        db.session.delete(contrato)
+
+                    # Eliminar pagos asociados al préstamo individual
+                    pagos = Pago.query.filter_by(prestamo_individual_id=prestamo_individual.id).all()
+                    for pago in pagos:
+                        db.session.delete(pago)
+
+                    # Eliminar el préstamo individual
+                    db.session.delete(prestamo_individual)
+
+                # Eliminar el préstamo grupal
+                db.session.delete(prestamo_grupal)
+
+            # Desasignar clientes del grupo
+            clientes = Cliente.query.filter_by(grupo_id=grupo.id).all()
+            for cliente in clientes:
+                cliente.grupo_id = None  # Asignar NULL al grupo_id
+
+        db.session.commit()  # Guardar todos los cambios
+
+        # Finalmente, eliminar el grupo
+        db.session.delete(grupo)
+        db.session.commit()
+
+        flash('Grupo y todas sus relaciones eliminadas exitosamente.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        print(f"Error al eliminar el grupo: {str(e)}")
+        flash(f'Ocurrió un error al eliminar el grupo: {str(e)}', 'danger')
+
+    return redirect(url_for('grupos.lista_grupos'))
+

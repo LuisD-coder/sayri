@@ -14,6 +14,6 @@ class Cliente(db.Model):
     numero_cuenta = db.Column(db.String(50))
     fecha_registro = db.Column(db.DateTime, default=datetime.utcnow)
 
-    grupo_id = db.Column(db.Integer, db.ForeignKey('grupo.id'), nullable=False)
+    grupo_id = db.Column(db.Integer, db.ForeignKey('grupo.id'), nullable=True)
 
     prestamos_individuales = db.relationship('PrestamoIndividual', backref='cliente', lazy=True)
