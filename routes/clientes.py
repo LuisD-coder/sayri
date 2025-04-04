@@ -1,6 +1,6 @@
-from flask import Blueprint, render_template, request, redirect, url_for
+from flask import Blueprint, render_template, request, redirect, url_for, abort
 from models import db, Cliente, Grupo, PrestamoGrupal, PrestamoIndividual,Contrato, Pago
-from flask_login import login_required
+from flask_login import login_required, current_user
 
 clientes_bp = Blueprint('clientes', __name__, url_prefix='/clientes')
 
@@ -74,6 +74,13 @@ def detalle_cliente(cliente_id):
 @clientes_bp.route('/eliminar/<int:cliente_id>', methods=['POST'])
 @login_required
 def eliminar_cliente(cliente_id):
+
+
+    # Verificar si el usuario tiene los roles permitidos
+    if not current_user.is_authenticated or current_user.rol.nombre not in ['admin', 'manager']:
+        print(f"Acceso denegado. Rol encontrado: {getattr(current_user.rol, 'nombre', 'Sin rol')}")
+        abort(403)  # Denegar acceso (403 Forbidden)
+
     cliente = Cliente.query.get_or_404(cliente_id)  # Obtener el cliente
     
     try:
