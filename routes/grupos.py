@@ -71,7 +71,8 @@ def asignar_clientes(grupo_id):
 @login_required
 def eliminar_grupo(grupo_id):
     # Verificar si el usuario tiene los roles permitidos
-    if current_user.rol not in ['admin', 'manager']:
+    if not current_user.is_authenticated or current_user.rol.nombre not in ['admin', 'manager']:
+        print(f"Acceso denegado. Rol encontrado: {getattr(current_user.rol, 'nombre', 'Sin rol')}")
         abort(403)  # Denegar acceso (403 Forbidden)
 
     grupo = Grupo.query.get_or_404(grupo_id)
@@ -104,9 +105,9 @@ def eliminar_grupo(grupo_id):
             # Desasignar clientes del grupo
             clientes = Cliente.query.filter_by(grupo_id=grupo.id).all()
             for cliente in clientes:
-                cliente.grupo_id = None  # Asignar NULL al grupo_id
+                cliente.grupo_id = None
 
-        db.session.commit()  # Guardar todos los cambios
+        db.session.commit()
 
         # Finalmente, eliminar el grupo
         db.session.delete(grupo)
