@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for
-from models import db, Cliente, Grupo, PrestamoGrupal, PrestamoIndividual
+from models import db, Cliente, Grupo, PrestamoGrupal, PrestamoIndividual,Contrato, Pago
 from flask_login import login_required
 
 clientes_bp = Blueprint('clientes', __name__, url_prefix='/clientes')
@@ -68,4 +68,28 @@ def detalle_cliente(cliente_id):
     prestamos_grupales = PrestamoGrupal.query.join(PrestamoIndividual).filter(PrestamoIndividual.cliente_id == cliente.id).all()  # Obtener préstamos grupales del cliente
     
     return render_template('clientes/detalle_cliente.html', cliente=cliente, prestamos=prestamos, contratos=contratos, pagos=pagos, prestamos_grupales=prestamos_grupales)
+
+
+
+@clientes_bp.route('/eliminar/<int:cliente_id>', methods=['POST'])
+@login_required
+def eliminar_cliente(cliente_id):
+    cliente = Cliente.query.get_or_404(cliente_id)  # Obtener el cliente
+    
+    try:
+        # Eliminar todos los préstamos individuales relacionados con el cliente
+        PrestamoIndividual.query.filter_by(cliente_id=cliente.id).delete()
+        # Eliminar los contratos asociados
+        Contrato.query.filter_by(cliente_id=cliente.id).delete()
+        # Eliminar todos los pagos relacionados con el cliente
+        Pago.query.filter_by(cliente_id=cliente.id).delete()
+        
+        
+        # Ahora eliminar el cliente
+        db.session.delete(cliente)
+        db.session.commit()
+        return redirect(url_for('clientes.lista_clientes'))
+    except Exception as e:
+        db.session.rollback()
+        return f"Error al eliminar el cliente: {str(e)}", 500
 
