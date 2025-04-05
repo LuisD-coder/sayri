@@ -160,10 +160,15 @@ def prestamos_por_grupo(grupo_id):
     
     # Obtener el grupo para mostrar su información en la plantilla
     grupo = Grupo.query.get_or_404(grupo_id)
+    
+    # Obtener la lista completa de grupos
+    grupos = Grupo.query.all()
 
     return render_template('prestamos_grupales/lista_prestamos_grupales.html', 
                            prestamos_grupales=prestamos_grupales, 
-                           grupo=grupo)
+                           grupo=grupo,
+                           grupos=grupos)  # Aquí se pasa la lista de grupos
+
 
 
 @prestamos_grupales_bp.route('/descargar_contrato/<int:contrato_id>')
