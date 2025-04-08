@@ -44,15 +44,21 @@ def nuevo_cliente():
 def lista_clientes():
     page = request.args.get('page', 1, type=int)
     grupo_id = request.args.get('grupo_id', type=int)
+    search = request.args.get('search', '').strip()
 
     query = Cliente.query
     if grupo_id:
         query = query.filter_by(grupo_id=grupo_id)
+    if search:
+        query = query.filter(
+            Cliente.nombre.ilike(f"%{search}%") | Cliente.dni.ilike(f"%{search}%")
+        )
 
     clientes = query.paginate(page=page, per_page=10)  # 10 clientes por página
     grupos = Grupo.query.all()  # Obtener todos los grupos
 
     return render_template('clientes/lista_clientes.html', clientes=clientes, grupos=grupos, selected_grupo=grupo_id)
+
 
 
 
@@ -100,3 +106,30 @@ def eliminar_cliente(cliente_id):
         db.session.rollback()
         return f"Error al eliminar el cliente: {str(e)}", 500
 
+
+@clientes_bp.route('/editar/<int:cliente_id>', methods=['GET', 'POST'])
+@login_required
+def actualizar_cliente(cliente_id):
+    cliente = Cliente.query.get_or_404(cliente_id)  # Obtener el cliente por su ID
+    grupos = Grupo.query.all()  # Listar los grupos disponibles
+
+    if request.method == 'POST':
+        try:
+            # Actualizar los datos del cliente con los valores del formulario
+            cliente.nombre = ' '.join(word.capitalize() for word in request.form['nombre'].strip().split())
+            cliente.apellido = ' '.join(word.capitalize() for word in request.form['apellido'].strip().split())
+            cliente.dni = request.form['dni'].strip()
+            cliente.celular = request.form['celular'].strip()
+            cliente.operadora = request.form['operadora'].strip().capitalize()
+            cliente.banco = request.form['banco'].strip().upper()
+            cliente.numero_cuenta = request.form['numero_cuenta'].strip()
+            cliente.grupo_id = request.form['grupo_id'].strip()
+
+            db.session.commit()  # Guardar los cambios en la base de datos
+            return redirect(url_for('clientes.detalle_cliente', cliente_id=cliente.id))
+        except Exception as e:
+            db.session.rollback()  # Revertir los cambios en caso de error
+            return f"Error al actualizar el cliente: {str(e)}", 500
+
+    # En caso de GET, renderizar el formulario de edición con los datos existentes
+    return render_template('clientes/editar_cliente.html', cliente=cliente, grupos=grupos)

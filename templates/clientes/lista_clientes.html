@@ -23,6 +23,13 @@
         </select>
     </form>
 
+    <!-- Formulario de búsqueda -->
+    <form method="GET" action="{{ url_for('clientes.lista_clientes') }}" class="search-form">
+        <label for="search">Buscar Cliente:</label>
+        <input type="text" id="search" name="search" placeholder="Nombre o DNI" value="{{ request.args.get('search', '') }}">
+        <button type="submit" class="btn btn-primary">Buscar</button>
+    </form>
+
     <!-- Contenedor de tarjetas -->
     <div class="clientes-grid">
         {% for cliente in clientes.items %}
@@ -30,7 +37,14 @@
                 <h3>{{ cliente.nombre }} {{ cliente.apellido }}</h3>
                 <p><strong>DNI:</strong> {{ cliente.dni }}</p>
                 <p><strong>Grupo:</strong> {{ cliente.grupo.nombre if cliente.grupo else 'Sin Grupo' }}</p>
+
+                <!-- Botón para ver detalles del cliente -->
                 <a href="{{ url_for('clientes.detalle_cliente', cliente_id=cliente.id) }}" class="btn">Ver Detalles</a>
+
+                <!-- Botón para editar cliente -->
+                <a href="{{ url_for('clientes.actualizar_cliente', cliente_id=cliente.id) }}" class="btn btn-warning" style="margin-top: 10px;">
+                    Editar
+                </a>
 
                 <!-- Botón para eliminar cliente -->
                 <form method="POST" action="{{ url_for('clientes.eliminar_cliente', cliente_id=cliente.id) }}" style="margin-top: 10px;">
@@ -45,13 +59,13 @@
     <!-- Paginación -->
     <div class="pagination">
         {% if clientes.has_prev %}
-            <a href="{{ url_for('clientes.lista_clientes', page=clientes.prev_num, grupo_id=selected_grupo) }}">Anterior</a>
+            <a href="{{ url_for('clientes.lista_clientes', page=clientes.prev_num, grupo_id=selected_grupo, search=request.args.get('search', '')) }}">Anterior</a>
         {% endif %}
 
         <span>Página {{ clientes.page }} de {{ clientes.pages }}</span>
 
         {% if clientes.has_next %}
-            <a href="{{ url_for('clientes.lista_clientes', page=clientes.next_num, grupo_id=selected_grupo) }}">Siguiente</a>
+            <a href="{{ url_for('clientes.lista_clientes', page=clientes.next_num, grupo_id=selected_grupo, search=request.args.get('search', '')) }}">Siguiente</a>
         {% endif %}
     </div>
 
@@ -92,6 +106,30 @@
         .filter-form select {
             padding: 8px;
             font-size: 16px;
+        }
+
+        /* Formulario de búsqueda */
+        .search-form {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .search-form input {
+            padding: 8px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .search-form button {
+            padding: 8px 12px;
+            font-size: 16px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            margin-left: 5px;
+        }
+        .search-form button:hover {
+            background: #0056b3;
         }
 
         /* Grid de clientes */
@@ -137,6 +175,19 @@
         }
         .btn:hover {
             background: #0056b3;
+        }
+
+        /* Botón de editar */
+        .btn-warning {
+            display: inline-block;
+            background: #ffc107;
+            color: white;
+            text-decoration: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+        }
+        .btn-warning:hover {
+            background: #e0a800;
         }
 
         /* Botón de eliminar */

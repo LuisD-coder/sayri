@@ -238,17 +238,15 @@ def generar_contrato(prestamo_grupal_id):
 
 
 
-
 def generar_contrato_logic(cliente_id, prestamo_grupal):
     # Obtener el cliente por su ID
     cliente = Cliente.query.get_or_404(cliente_id)
 
     # Obtener el préstamo individual correcto dentro del préstamo grupal
-    prestamo_individual = None  
-
+    prestamo_individual = None
     for prestamo in prestamo_grupal.prestamos_individuales:
         if prestamo.cliente_id == cliente.id:
-            prestamo_individual = prestamo  
+            prestamo_individual = prestamo
             break
 
     if prestamo_individual is None:
@@ -257,16 +255,17 @@ def generar_contrato_logic(cliente_id, prestamo_grupal):
     monto_cliente = round(prestamo_individual.monto)
 
     contrato_path = f"static/contrato_preformateado{monto_cliente}.pdf"
-    
     if not os.path.exists(contrato_path):
         raise FileNotFoundError(f"No se encontró el archivo de contrato preformateado para el monto {monto_cliente}.")
-    
-    doc = fitz.open(contrato_path)
+
+    try:
+        doc = fitz.open(contrato_path)
+    except Exception as e:
+        raise ValueError(f"Error al abrir el archivo PDF: {e}")
 
     # Obtener las fechas de pago solo del préstamo individual correcto
     pagos = Pago.query.filter_by(cliente_id=cliente.id, prestamo_individual_id=prestamo_individual.id) \
                       .order_by(Pago.fecha_pago).limit(4).all()
-
     fechas_pago = [pago.fecha_pago.strftime('%d/%m/%Y') for pago in pagos]
 
     # Asegurar que haya 4 fechas, rellenando con "N/A" si es necesario
@@ -275,8 +274,7 @@ def generar_contrato_logic(cliente_id, prestamo_grupal):
 
     # Definir los datos a reemplazar
     datos_cliente = {
-        "NOMBRE": cliente.nombre.upper(),
-        "APELLIDO": cliente.apellido.upper(),
+        "NOMBRE_APELLIDO": f"{cliente.nombre.upper()} {cliente.apellido.upper()}",
         "DNI": cliente.dni,
         "PRESTAMO": f"{monto_cliente}",
         "FECHA_DSB": prestamo_grupal.fecha_desembolso.strftime('%d/%m/%Y'),
@@ -293,15 +291,26 @@ def generar_contrato_logic(cliente_id, prestamo_grupal):
             placeholder = f"{{{{{tag}}}}}"
             for inst in page.search_for(placeholder):
                 text_instances.append((inst, value))
-        
+
         for rect, value in text_instances:
-            x, y, width, height = rect.x0, rect.y0, rect.width, rect.height
-            
-            # Cubrir el texto original con un rectángulo blanco
-            page.draw_rect(rect, color=(1, 1, 1), fill=(1, 1, 1))
-            
+            x0, y0, x1, y1 = rect.x0, rect.y0, rect.x1, rect.y1
+
+            # Dibujar un rectángulo blanco para cubrir la etiqueta
+            rect = fitz.Rect(x0, y0, x1, y1)
+            page.draw_rect(
+                rect,
+                color=(1, 1, 1),  # Color blanco (borde opcional)
+                fill=(1, 1, 1),   # Color blanco (relleno)
+                width=0           # Sin bordes visibles
+            )
+
             # Escribir el nuevo texto en la misma posición
-            page.insert_text((x, y + height * 0.8), value, fontsize=9, color=(0, 0, 0))
+            page.insert_text(
+                (rect.x0, rect.y0 + rect.height * 0.8),
+                value,
+                fontsize=9,
+                color=(0, 0, 0)
+            )
 
     # Guardar el contrato en memoria y en la base de datos
     buffer = io.BytesIO()
@@ -309,15 +318,18 @@ def generar_contrato_logic(cliente_id, prestamo_grupal):
     buffer.seek(0)
 
     nombre_archivo = f"contrato_{cliente.nombre.upper()}_{cliente.apellido.upper()}_{monto_cliente}.pdf"
-    
+
     nuevo_contrato = Contrato(
         nombre_archivo=nombre_archivo,
         archivo=buffer.getvalue(),
         cliente_id=cliente.id,
         prestamo_individual_id=prestamo_individual.id
     )
-    
+
     db.session.add(nuevo_contrato)
     db.session.commit()
 
-    return send_file(buffer, as_attachment=True, download_name=nombre_archivo, mimetype='application/pdf')
+    # Liberar recursos del buffer
+    buffer.close()
+
+    return send_file(io.BytesIO(nuevo_contrato.archivo), as_attachment=True, download_name=nombre_archivo, mimetype='application/pdf')
