@@ -22,10 +22,9 @@ class PrestamoIndividual(db.Model):
 
         monto_pagado = db.session.query(db.func.sum(Pago.monto_pagado)).filter(
         Pago.prestamo_individual_id == self.id,
-        Pago.estado == "Pagado"
+        Pago.estado.in_(["Pagado", "Incompleto"])  # Filtrar pagos con estos estados
     ).scalar() or 0  # Si no hay pagos, asigna 0
 
-        #return self.monto - float(monto_pagado)  # Conversión a float para evitar el error
-        return float(monto_pagado)
+        return float(monto_pagado)  # Conversión a float para evitar problemas con Decimal
 
 

@@ -44,9 +44,6 @@ def lista_pagos():
 def agregar_pago(prestamo_id):
     prestamo = PrestamoIndividual.query.get_or_404(prestamo_id)
 
-    # Convertir monto a Decimal para evitar problemas con float
-    #monto_pago = Decimal(request.form['monto_pago'])
-
     # Obtener la fecha del pago
     fecha_pago_str = request.form['fecha_pago']
     fecha_pago = datetime.strptime(fecha_pago_str, '%Y-%m-%d').date()
@@ -60,17 +57,25 @@ def agregar_pago(prestamo_id):
     ).first()
 
     if not pago_existente:
-        # Si no existe el pago, se crea con el monto pagado que ya corresponde al préstamo
+        # Si no existe el pago, se crea con el monto correspondiente
+        monto_pagado = prestamo.monto_pagado if estado_pago != "Incompleto" else float(request.form['monto_pago'])
+
         pago_existente = Pago(
             prestamo_individual_id=prestamo.id,
             cliente_id=prestamo.cliente_id,
             fecha_pago=fecha_pago,
-            monto_pagado=prestamo.monto_pagado,  # Usar el valor fijo almacenado
+            monto_pagado=monto_pagado,
             estado=estado_pago  
         )
         db.session.add(pago_existente)
+    else:
+        # Si existe y el nuevo estado es "Pagado", reemplazar monto_pagado con el monto fijo del préstamo
+        if estado_pago == "Pagado":
+            pago_existente.monto_pagado = prestamo.monto_pagado
+        elif estado_pago == "Incompleto":
+            pago_existente.monto_pagado = float(request.form['monto_pago'])
 
-    # Solo actualizar el estado del pago
+    # Actualizar el estado del pago
     pago_existente.estado = estado_pago
 
     # Guardar cambios en la base de datos
@@ -78,4 +83,3 @@ def agregar_pago(prestamo_id):
 
     # Redirigir a la lista de pagos del mismo grupo
     return redirect(url_for('pagos.lista_pagos', grupo_id=prestamo.prestamo_grupal.grupo_id))
-

@@ -67,6 +67,8 @@
                                                                     (⏳ Pendiente)
                                                                 {% elif pago.estado == 'Atrasado' %}
                                                                     (⚠️ Atrasado)
+                                                                {% elif pago.estado == 'Incompleto' %}
+                                                                    (- Incompleto)
                                                                 {% endif %}
                                                             </option>
                                                         {% endfor %}
@@ -75,17 +77,35 @@
 
                                                 <div class="col-md-4">
                                                     <label class="form-label fw-semibold">Estado:</label>
-                                                    <select name="estado_pago" class="form-select border-info" required>
+                                                    <select name="estado_pago" id="estado_pago" class="form-select border-info" required onchange="toggleMontoPagado()">
                                                         <option value="Pendiente">Pendiente</option>
                                                         <option value="Pagado">Pagado</option>
                                                         <option value="Atrasado">Atrasado</option>
+                                                        <option value="Incompleto">Incompleto</option>
                                                     </select>
                                                 </div>
+                                                
+                                                <div class="col-md-4" id="monto_pagado_container">
+                                                    <label class="form-label fw-semibold">Monto Pagado:</label>
+                                                    <p class="fw-bold text-success" id="monto_pagado">S/. {{ prestamo.monto_pagado }}</p>
+                                                    <input type="number" name="monto_pago" id="input_monto_pagado" class="form-control border-info d-none" step="0.01" placeholder="Ingrese el monto">
+                                                </div>
 
-                                                <div class="col-md-4">
-    <label class="form-label fw-semibold">Monto Pagado:</label>
-    <p class="fw-bold text-success">S/. {{ prestamo.monto_pagado }}</p>
-</div>
+                                                <script>
+                                                    function toggleMontoPagado() {
+                                                        let estadoPago = document.getElementById("estado_pago").value;
+                                                        let montoPagadoLabel = document.getElementById("monto_pagado");
+                                                        let montoPagadoInput = document.getElementById("input_monto_pagado");
+                                                
+                                                        if (estadoPago === "Incompleto") {
+                                                            montoPagadoLabel.classList.add("d-none");  // Ocultar el texto
+                                                            montoPagadoInput.classList.remove("d-none");  // Mostrar el input
+                                                        } else {
+                                                            montoPagadoLabel.classList.remove("d-none");  // Mostrar el texto
+                                                            montoPagadoInput.classList.add("d-none");  // Ocultar el input
+                                                        }
+                                                    }
+                                                </script>
 
                                                 <div class="col-12">
                                                     <button type="submit" class="btn btn-success w-100 shadow">Añadir Pago</button>
