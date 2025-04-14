@@ -1,3 +1,4 @@
+
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from datetime import datetime, date
 from models import Pago, PrestamoIndividual, Cliente, Grupo, PrestamoGrupal

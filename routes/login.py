@@ -10,7 +10,7 @@ login_bp = Blueprint('login', __name__)
 @login_bp.route('/login', methods=['GET', 'POST'])
 def login_view():
     if current_user.is_authenticated:
-        return redirect(url_for('base'))  # Redirigir a base.html si el usuario ya está autenticado
+        return redirect(url_for('base.home'))  # Redirigir a la página principal si el usuario ya está autenticado
 
     if request.method == 'POST':
         email = request.form['email']
@@ -22,7 +22,7 @@ def login_view():
             login_user(user)  # Iniciar sesión
 
             flash('¡Inicio de sesión exitoso!', 'success')
-            return redirect(url_for('login.base'))  # Aquí cambiar a 'login.base' o el endpoint que corresponda
+            return redirect(url_for('base.home'))  # Redirigir a la página de inicio (raíz del proyecto)
 
         flash('Correo o contraseña incorrectos', 'danger')
 
@@ -33,6 +33,7 @@ def login_view():
 @login_required
 def base():
     return render_template('base.html')  # Se asume que base.html está en la carpeta templates
+
 
 
 # Ruta de logout
