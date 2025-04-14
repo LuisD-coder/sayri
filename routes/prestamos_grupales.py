@@ -66,6 +66,11 @@ def lista_prestamos_grupales():
 
 
 
+MONTOS_PAGADOS = {
+    500: 151, 600: 181, 700: 211, 800: 241, 900: 271,
+    1000: 302, 1100: 331, 1200: 361, 1300: 391, 1400: 421,
+    1500: 451
+}
 
 # Asignar préstamos individuales a los clientes dentro de un préstamo grupal
 @prestamos_grupales_bp.route('/<int:prestamo_grupal_id>/asignar_prestamos_individuales', methods=['GET', 'POST'])
@@ -90,11 +95,15 @@ def asignar_prestamos_individuales(prestamo_grupal_id):
                 flash(f"El monto para el cliente {cliente_id} no es válido.")
                 return redirect(url_for('prestamos_grupales.asignar_prestamos_individuales', prestamo_grupal_id=prestamo_grupal_id))
 
+            # Obtener el monto pagado basado en el monto del préstamo
+            monto_pagado = MONTOS_PAGADOS.get(int(monto), 0)  # Si no está en el diccionario, asigna 0
+
             # Crear el préstamo individual
             nuevo_prestamo_individual = PrestamoIndividual(
                 prestamo_grupal_id=prestamo_grupal.id,
                 cliente_id=cliente_id,
-                monto=monto
+                monto=monto,
+                monto_pagado=monto_pagado  # Asignar el monto pagado
             )
             db.session.add(nuevo_prestamo_individual)
             db.session.commit()  # Commit para obtener el ID del préstamo individual
@@ -106,7 +115,7 @@ def asignar_prestamos_individuales(prestamo_grupal_id):
                     cliente_id=cliente_id,
                     prestamo_individual_id=nuevo_prestamo_individual.id,  
                     monto_pendiente=0,
-                    monto_pagado=0,
+                    monto_pagado=monto_pagado,
                     estado="Pendiente",
                     fecha_pago=fecha_pago  
                 )
@@ -117,8 +126,7 @@ def asignar_prestamos_individuales(prestamo_grupal_id):
 
         # Actualizar monto_total del préstamo grupal
         prestamos_individuales = db.session.query(db.func.sum(PrestamoIndividual.monto)).filter_by(prestamo_grupal_id=prestamo_grupal.id).scalar() or 0
-        # Solo usa la propiedad calculada, sin asignar directamente
-        prestamo_grupal.monto_total  # Solo accede, no asignes
+        prestamo_grupal.monto_total  # Solo accede a la propiedad calculada
 
         db.session.commit()
         

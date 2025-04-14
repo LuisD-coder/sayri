@@ -1,4 +1,5 @@
 from models import db
+from sqlalchemy import func
 
 class PrestamoIndividual(db.Model):
     __tablename__ = 'prestamoindividual'
@@ -17,7 +18,14 @@ class PrestamoIndividual(db.Model):
 
     @property
     def monto_pendiente(self):
-        # Verificar que monto_pagado no sea None
-        if self.monto_pagado is None:
-            return self.monto
-        return self.monto - self.monto_pagado
+        from models.pago import Pago  # Importación dentro del método para evitar ciclos
+
+        monto_pagado = db.session.query(db.func.sum(Pago.monto_pagado)).filter(
+        Pago.prestamo_individual_id == self.id,
+        Pago.estado == "Pagado"
+    ).scalar() or 0  # Si no hay pagos, asigna 0
+
+        #return self.monto - float(monto_pagado)  # Conversión a float para evitar el error
+        return float(monto_pagado)
+
+

@@ -45,13 +45,13 @@ def agregar_pago(prestamo_id):
     prestamo = PrestamoIndividual.query.get_or_404(prestamo_id)
 
     # Convertir monto a Decimal para evitar problemas con float
-    monto_pago = Decimal(request.form['monto_pago'])
+    #monto_pago = Decimal(request.form['monto_pago'])
 
     # Obtener la fecha del pago
     fecha_pago_str = request.form['fecha_pago']
     fecha_pago = datetime.strptime(fecha_pago_str, '%Y-%m-%d').date()
 
-    # Obtener el estado del pago desde el formulario (dependiendo de la opción del cliente)
+    # Obtener el estado del pago desde el formulario
     estado_pago = request.form['estado_pago']
 
     # Verificar si ya existe un pago para esa fecha
@@ -59,38 +59,23 @@ def agregar_pago(prestamo_id):
         prestamo_individual_id=prestamo.id, fecha_pago=fecha_pago
     ).first()
 
-    if pago_existente:
-        # Si ya existe, sumamos el monto al pago existente
-        pago_existente.monto_pagado += monto_pago
-    else:
-        # Si no existe, creamos un nuevo pago
+    if not pago_existente:
+        # Si no existe el pago, se crea con el monto pagado que ya corresponde al préstamo
         pago_existente = Pago(
             prestamo_individual_id=prestamo.id,
+            cliente_id=prestamo.cliente_id,
             fecha_pago=fecha_pago,
-            monto_pagado=monto_pago,
-            estado=estado_pago  # Usar el estado recibido del formulario
+            monto_pagado=prestamo.monto_pagado,  # Usar el valor fijo almacenado
+            estado=estado_pago  
         )
         db.session.add(pago_existente)
 
-    # Actualizar el monto pagado del préstamo individual
-    prestamo.monto_pagado += float(monto_pago)
-
-    # Recalcular monto pendiente
-    monto_pendiente = prestamo.monto - prestamo.monto_pagado
-
-    # El estado depende de la opción seleccionada por el cliente
-    if estado_pago == "Pagado":
-        pago_existente.estado = "Pagado"
-        # Asegurarse de que el monto pagado no sobrepase el monto total
-        if prestamo.monto_pagado > prestamo.monto:
-            prestamo.monto_pagado = prestamo.monto
-    elif estado_pago == "Atrasado":
-        pago_existente.estado = "Atrasado"
-    else:  # En caso de que el estado sea "Pendiente"
-        pago_existente.estado = "Pendiente"
+    # Solo actualizar el estado del pago
+    pago_existente.estado = estado_pago
 
     # Guardar cambios en la base de datos
     db.session.commit()
 
     # Redirigir a la lista de pagos del mismo grupo
     return redirect(url_for('pagos.lista_pagos', grupo_id=prestamo.prestamo_grupal.grupo_id))
+
