@@ -44,95 +44,106 @@
 
                     <div class="row">
                         {% for prestamo in prestamo_grupal.prestamos_individuales %}
-                            <div class="col-md-6">
-                                <div class="card my-3 border-0 shadow-sm">
-                                    <div class="card-body">
-                                        <h6 class="mb-2 text-dark"><strong>Cliente:</strong> {{ prestamo.cliente.nombre }} {{ prestamo.cliente.apellido }}</h6>
-                                        <p class="mb-1"><strong>Monto Préstamo:</strong> S/. {{ prestamo.monto }}</p>
-                                        <p class="mb-1"><strong>Monto Pendiente:</strong> S/. {{ prestamo.monto_pendiente }}</p>
+  <div class="col-md-6">
+    <div class="card my-3 border-0 shadow-sm">
+      <div class="card-body">
+        <h6 class="mb-2 text-dark"><strong>Cliente:</strong> {{ prestamo.cliente.nombre }} {{ prestamo.cliente.apellido }}</h6>
+        <p class="mb-1"><strong>Monto Préstamo:</strong> S/. {{ prestamo.monto }}</p>
+        <p class="mb-1"><strong>Monto Pendiente:</strong> S/. {{ prestamo.monto_pendiente }}</p>
 
-                                        <!-- Formulario de pago -->
-                                        <form action="{{ url_for('pagos.agregar_pago', prestamo_id=prestamo.id) }}" method="POST" class="mt-3 p-3 bg-light shadow-sm rounded">
-                                            <div class="row g-3">
-                                                <div class="col-md-4">
-                                                    <label class="form-label fw-semibold">Fecha de Pago:</label>
-                                                    <select name="fecha_pago" class="form-select border-info" required>
-                                                        <option value="">Selecciona una fecha</option>
-                                                        {% for pago in prestamo.pagos %}
-                                                            <option value="{{ pago.fecha_pago.strftime('%Y-%m-%d') }}" {% if pago.estado == 'Pagado' %}disabled{% endif %}>
-                                                                {{ pago.fecha_pago.strftime('%d/%m/%Y') }} 
-                                                                {% if pago.estado == 'Pagado' %}
-                                                                    (✅ Pagado)
-                                                                {% elif pago.estado == 'Pendiente' %}
-                                                                    (⏳ Pendiente)
-                                                                {% elif pago.estado == 'Atrasado' %}
-                                                                    (⚠️ Atrasado)
-                                                                {% elif pago.estado == 'Incompleto' %}
-                                                                    (- Incompleto)
-                                                                {% endif %}
-                                                            </option>
-                                                        {% endfor %}
-                                                    </select>
-                                                </div>
+        <!-- Formulario de pago -->
+        <form action="{{ url_for('pagos.agregar_pago', prestamo_id=prestamo.id) }}" method="POST" class="mt-3 p-3 bg-light shadow-sm rounded">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Fecha de Pago:</label>
+              <select name="fecha_pago" class="form-select border-info" required>
+                <option value="">Selecciona una fecha</option>
+                {% for pago in prestamo.pagos %}
+                  <option value="{{ pago.fecha_pago.strftime('%Y-%m-%d') }}" {% if pago.estado == 'Pagado' %}disabled{% endif %}>
+                    {{ pago.fecha_pago.strftime('%d/%m/%Y') }} 
+                    {% if pago.estado == 'Pagado' %}
+                      (✅ Pagado)
+                    {% elif pago.estado == 'Pendiente' %}
+                      (⏳ Pendiente)
+                    {% elif pago.estado == 'Atrasado' %}
+                      (⚠️ Atrasado)
+                    {% elif pago.estado == 'Incompleto' %}
+                      (- Incompleto)
+                    {% endif %}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
 
-                                                <div class="col-md-4">
-                                                    <label class="form-label fw-semibold">Estado:</label>
-                                                    <select name="estado_pago" id="estado_pago" class="form-select border-info" required onchange="toggleMontoPagado()">
-                                                        <option value="Pendiente">Pendiente</option>
-                                                        <option value="Pagado">Pagado</option>
-                                                        <option value="Atrasado">Atrasado</option>
-                                                        <option value="Incompleto">Incompleto</option>
-                                                    </select>
-                                                </div>
-                                                
-                                                <div class="col-md-4" id="monto_pagado_container">
-                                                    <label class="form-label fw-semibold">Monto Pagado:</label>
-                                                    <p class="fw-bold text-success" id="monto_pagado">S/. {{ prestamo.monto_pagado }}</p>
-                                                    <input type="number" name="monto_pago" id="input_monto_pagado" class="form-control border-info d-none" step="0.01" placeholder="Ingrese el monto">
-                                                </div>
+            <div class="col-md-4">
+              <label class="form-label fw-semibold">Estado:</label>
+              <select name="estado_pago" id="estado_pago_{{ prestamo.id }}" class="form-select border-info estado-pago" required data-prestamo-id="{{ prestamo.id }}">
+                <option value="Pendiente">Pendiente</option>
+                <option value="Pagado">Pagado</option>
+                <option value="Atrasado">Atrasado</option>
+                <option value="Incompleto">Incompleto</option>
+              </select>
+            </div>
+            
+            <div class="col-md-4" id="monto_pagado_container_{{ prestamo.id }}">
+              <label class="form-label fw-semibold">Monto Pagado:</label>
+              <p class="fw-bold text-success" id="monto_pagado_{{ prestamo.id }}">S/. {{ prestamo.monto_pagado }}</p>
+              <input type="number" name="monto_pago" id="input_monto_pagado_{{ prestamo.id }}" class="form-control border-info d-none" step="0.01" placeholder="Ingrese el monto">
+            </div>
 
-                                                <script>
-                                                    function toggleMontoPagado() {
-                                                        let estadoPago = document.getElementById("estado_pago").value;
-                                                        let montoPagadoLabel = document.getElementById("monto_pagado");
-                                                        let montoPagadoInput = document.getElementById("input_monto_pagado");
-                                                
-                                                        if (estadoPago === "Incompleto") {
-                                                            montoPagadoLabel.classList.add("d-none");  // Ocultar el texto
-                                                            montoPagadoInput.classList.remove("d-none");  // Mostrar el input
-                                                        } else {
-                                                            montoPagadoLabel.classList.remove("d-none");  // Mostrar el texto
-                                                            montoPagadoInput.classList.add("d-none");  // Ocultar el input
-                                                        }
-                                                    }
-                                                </script>
+            <div class="col-12">
+              <button type="submit" class="btn btn-success w-100 shadow">Añadir Pago</button>
+            </div>
+          </div>
+        </form>
 
-                                                <div class="col-12">
-                                                    <button type="submit" class="btn btn-success w-100 shadow">Añadir Pago</button>
-                                                </div>
-                                            </div>
-                                        </form>
+        <!-- Mostrar los días de retraso solo si el pago está atrasado -->
+        {% for pago in prestamo.pagos %}
+          {% if pago.estado == 'Atrasado' %}
+            <p class="mb-1 text-danger fw-bold"><strong>Días de Retraso:</strong> 
+              {% if current_date and pago.fecha_pago %}
+                {{ (current_date - pago.fecha_pago).days }} días
+              {% else %}
+                No disponible
+              {% endif %}
+            </p>
+          {% endif %}
 
-                                        <!-- Mostrar los días de retraso solo si el pago está atrasado -->
-                                        {% for pago in prestamo.pagos %}
-                                            {% if pago.estado == 'Atrasado' %}
-                                                <p class="mb-1 text-danger fw-bold"><strong>Días de Retraso:</strong> 
-                                                    {% if current_date and pago.fecha_pago %}
-                                                        {{ (current_date - pago.fecha_pago).days }} días
-                                                    {% else %}
-                                                        No disponible
-                                                    {% endif %}
-                                                </p>
-                                            {% endif %}
+          {% if pago.estado == 'Pagado' %}
+            <p class="mb-1 text-success fw-bold"><strong>Pago Realizado:</strong> ✅ El pago fue realizado con éxito.</p>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+{% endfor %}
 
-                                            {% if pago.estado == 'Pagado' %}
-                                                <p class="mb-1 text-success fw-bold"><strong>Pago Realizado:</strong> ✅ El pago fue realizado con éxito.</p>
-                                            {% endif %}
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            </div>
-                        {% endfor %}
+<script>
+    function toggleMontoPagado(prestamoId) {
+      const estadoPago = document.getElementById(`estado_pago_${prestamoId}`);
+      const montoPagadoLabel = document.getElementById(`monto_pagado_${prestamoId}`);
+      const montoPagadoInput = document.getElementById(`input_monto_pagado_${prestamoId}`);
+  
+      if (estadoPago.value === "Incompleto") {
+        montoPagadoLabel.classList.add("d-none");  // Ocultar el texto
+        montoPagadoInput.classList.remove("d-none");  // Mostrar el input
+      } else {
+        montoPagadoLabel.classList.remove("d-none");  // Mostrar el texto
+        montoPagadoInput.classList.add("d-none");  // Ocultar el input
+      }
+    }
+  
+    // Agregar controladores de eventos a todos los selectores de estado de pago
+    document.addEventListener("DOMContentLoaded", function() {
+      const estadoPagos = document.querySelectorAll(".estado-pago");
+      estadoPagos.forEach(function(select) {
+        const prestamoId = select.getAttribute("data-prestamo-id");
+        select.addEventListener("change", function() {
+          toggleMontoPagado(prestamoId);
+        });
+      });
+    });
+  </script>
                     </div>
                 </div>
             </div>
