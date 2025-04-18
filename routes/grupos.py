@@ -20,6 +20,26 @@ def nuevo_grupo():
 
     return render_template('grupos/nuevo_grupo.html')
 
+
+@grupos_bp.route('/<int:grupo_id>/editar', methods=['GET', 'POST'])
+@login_required
+def editar_grupo(grupo_id):
+    grupo = Grupo.query.get_or_404(grupo_id)
+
+    if request.method == 'POST':
+        nuevo_nombre = request.form['nombre']
+
+        if nuevo_nombre.strip():
+            grupo.nombre = nuevo_nombre.strip()
+            db.session.commit()
+            flash('Grupo actualizado exitosamente.', 'success')
+            return redirect(url_for('grupos.lista_grupos'))
+        else:
+            flash('El nombre del grupo no puede estar vacío.', 'danger')
+
+    return render_template('grupos/editar_grupo.html', grupo=grupo)
+
+
 # Listar todos los grupos
 @grupos_bp.route('/')
 @login_required

@@ -14,7 +14,13 @@
     <div class="grupos-grid">
         {% for grupo in grupos %}
             <div class="grupo-card">
-                <h3>{{ grupo.nombre }}</h3>
+                <h3>
+                    {{ grupo.nombre }}
+                    <a href="{{ url_for('grupos.editar_grupo', grupo_id=grupo.id) }}" class="btn-edit-group" title="Editar Grupo">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                </h3>
+                
                 <p class="prestamos-count"><strong>Préstamos Grupales:</strong> {{ grupo.prestamos_grupales|length }}</p>
                 <p class="clientes-count"><strong>Clientes Asignados:</strong> {{ grupo.clientes|length }}</p>
                 

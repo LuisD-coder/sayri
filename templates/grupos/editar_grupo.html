@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block title %}Editar Grupo{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2 class="text-center mb-4">Editar Grupo</h2>
+
+    <form method="POST">
+        <div class="mb-3">
+            <label for="nombre" class="form-label">Nombre del Grupo</label>
+            <input type="text" class="form-control" name="nombre" id="nombre" value="{{ grupo.nombre }}" required>
+        </div>
+
+        <div class="text-center">
+            <button type="submit" class="btn btn-success">Guardar Cambios</button>
+            <a href="{{ url_for('grupos.lista_grupos') }}" class="btn btn-secondary">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

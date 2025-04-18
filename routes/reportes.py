@@ -20,11 +20,9 @@ def get_prestamos_clientes():
     grupo_id = request.args.get('grupo_id')
 
     if grupo_id:
-        # Obtener préstamos grupales del grupo seleccionado
         prestamos = PrestamoGrupal.query.filter_by(grupo_id=grupo_id).all()
-        prestamos_data = [{"id": p.id} for p in prestamos]
+        prestamos_data = [{"id": p.id, "fecha_desembolso": p.fecha_desembolso.strftime('%d-%m-%Y')} for p in prestamos]
 
-        # Obtener clientes del grupo seleccionado
         clientes = Cliente.query.filter_by(grupo_id=grupo_id).all()
         clientes_data = [{"id": c.id, "nombre": c.nombre, "apellido": c.apellido} for c in clientes]
 
@@ -49,15 +47,16 @@ def pagos_realizados():
         prestamos_grupales = PrestamoGrupal.query.filter_by(grupo_id=grupo_id).all()
         clientes = Cliente.query.filter_by(grupo_id=grupo_id).all()
 
-        # Ejecutar consulta de pagos solo si se filtra por grupo, préstamo o cliente
-        query = Pago.query.join(Pago.cliente).join(Pago.prestamo_individual).order_by(Pago.fecha_pago.desc())
+        # Ejecutar consulta de pagos con orden por cliente y fecha de pago
+        query = Pago.query.join(Pago.cliente).join(Pago.prestamo_individual).order_by(Pago.cliente_id, Pago.fecha_pago.desc())
+
         if prestamo_grupal_id:
             query = query.filter(Pago.prestamo_individual.has(prestamo_grupal_id=prestamo_grupal_id))
         if cliente_id:
             query = query.filter(Pago.cliente_id == cliente_id)
+        
         pagos = query.all()
 
-    # Obtener todos los grupos para el filtro inicial
     grupos = Grupo.query.all()
 
     return render_template('reportes/pagos_realizados.html', pagos=pagos, grupos=grupos, prestamos_grupales=prestamos_grupales, clientes=clientes)
