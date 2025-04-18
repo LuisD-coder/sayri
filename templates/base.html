@@ -20,13 +20,38 @@
         <div class="container-fluid d-flex flex-column flex-lg-row align-items-start align-items-lg-center">
             <div class="d-flex flex-column">
                 <a class="navbar-brand fw-bold" href="/">Financiera Sayri</a>
-                <small class="text-white-50" style="font-size: 0.75rem;">Versión 1.0.2</small>
+                <small class="text-white-50" style="font-size: 0.75rem;">Versión 1.0.4</small>
             </div>
             <button class="navbar-toggler ms-auto" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse justify-content-end mt-2 mt-lg-0" id="navbarNav">
                 <ul class="navbar-nav">
+                    {% if current_user.is_authenticated and current_user.rol.nombre == 'admin' %}
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle text-light" href="#" id="reportesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-file-earmark-text"></i> Reportes
+                        </a>
+                        <ul class="dropdown-menu bg-dark border-light" aria-labelledby="reportesDropdown">
+                            <li><a class="dropdown-item text-light" href="{{ url_for('reportes.pagos_realizados') }}">Pagos Realizados</a></li>
+                            <li><a class="dropdown-item text-light" href="{{ url_for('reportes.pagos_vencidos') }}">Pagos Vencidos</a></li>
+                            <li><a class="dropdown-item text-light" href="{{ url_for('reportes.pagos_proximos') }}">Pagos Próximos</a></li>
+                        </ul>
+                    </li>
+                    
+                  <style>
+                    .dropdown-menu {
+                        background-color: #212529 !important; /* Oscuro pero no totalmente negro */
+                        border: 1px solid #ffffff;
+                    }
+
+                    .dropdown-item:hover {
+                        background-color: #343a40 !important; /* Color más oscuro al pasar el mouse */
+                    }
+
+                  </style>  
+                    
+                    {% endif %}
                     <li class="nav-item">
                         <a class="nav-link" href="{{ url_for('clientes.lista_clientes') }}">
                             <i class="bi bi-people"></i> Clientes
@@ -81,7 +106,7 @@
     </main>
 
     <footer class="text-center text-muted py-3">
-        <small>&copy; 2025 Financiera Sayri. Todos los derechos reservados.</small>
+        <small style="color: aliceblue;">&copy; 2025 Financiera Sayri. Todos los derechos reservados.</small>
     </footer>
 
     <!-- Bootstrap JS -->
