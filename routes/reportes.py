@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify
 from flask_login import login_required, current_user
+from datetime import datetime, timedelta
 from models import db
 from models.pago import Pago
 from models.cliente import Cliente
@@ -37,32 +38,39 @@ def pagos_realizados():
     grupo_id = request.args.get('grupo_id')
     prestamo_grupal_id = request.args.get('prestamo_grupal_id')
     cliente_id = request.args.get('cliente_id')
+    estado = request.args.get('estado')
 
     pagos = []
     prestamos_grupales = []
     clientes = []
 
     if grupo_id:
-        # Obtener préstamos grupales y clientes del grupo seleccionado
+        # Filtrar préstamos grupales y clientes del grupo seleccionado
         prestamos_grupales = PrestamoGrupal.query.filter_by(grupo_id=grupo_id).all()
         clientes = Cliente.query.filter_by(grupo_id=grupo_id).all()
 
-        # Ejecutar consulta de pagos con orden por cliente y fecha de pago
-        query = Pago.query.join(Pago.cliente).join(Pago.prestamo_individual).order_by(Pago.cliente_id, Pago.fecha_pago.desc())
+        # Filtrar pagos
+        query = Pago.query.join(Pago.prestamo_individual).join(PrestamoGrupal).filter(PrestamoGrupal.grupo_id == grupo_id)
 
         if prestamo_grupal_id:
             query = query.filter(Pago.prestamo_individual.has(prestamo_grupal_id=prestamo_grupal_id))
         if cliente_id:
             query = query.filter(Pago.cliente_id == cliente_id)
-        
-        pagos = query.all()
+        if estado:
+            query = query.filter(Pago.estado == estado)  # Filtrar por estado
+
+        # Ordenar pagos por Cliente -> Préstamo Grupal -> Fecha de Pago
+        pagos = query.order_by(Pago.cliente_id, PrestamoGrupal.id, Pago.fecha_pago.desc()).all()
 
     grupos = Grupo.query.all()
 
     return render_template('reportes/pagos_realizados.html', pagos=pagos, grupos=grupos, prestamos_grupales=prestamos_grupales, clientes=clientes)
 
-@login_required
-def pagos_realizados():
+
+
+
+#@login_required
+#def pagos_realizados():
     grupo_id = request.args.get('grupo_id')
     prestamo_grupal_id = request.args.get('prestamo_grupal_id')
     cliente_id = request.args.get('cliente_id')
@@ -107,9 +115,40 @@ def pagos_realizados():
     return render_template('reportes/pagos_realizados.html', pagos=pagos, grupos=grupos, prestamos_grupales=prestamos_grupales, clientes=clientes)
 
 
-@reportes_bp.route('/pagos_vencidos')
-def pagos_vencidos():
-    return render_template('reportes/pagos_vencidos.html')
+@reportes_bp.route('/pagos_xfecha')
+def pagos_xfecha():
+    rango_fecha = request.args.get('rango_fecha')
+    estado = request.args.get('estado')
+
+    pagos = []
+    query = Pago.query.join(Pago.prestamo_individual).join(PrestamoGrupal)
+
+    # Depuración: Verificar el filtro de fecha recibido
+    print("Filtro de fecha seleccionado:", rango_fecha)
+
+    # Aplicar filtro de fecha con conversión a string en formato 'YYYY-MM-DD'
+    fecha_limite = None
+    if rango_fecha:
+        hoy = datetime.today()
+        if rango_fecha == "ultima_semana":
+            fecha_limite = hoy - timedelta(days=7)
+        elif rango_fecha == "ultimo_mes":
+            fecha_limite = hoy - timedelta(days=30)
+
+        if fecha_limite:
+            fecha_limite_str = fecha_limite.strftime('%Y-%m-%d')  # Convertir a cadena
+            print("Fecha límite aplicada:", fecha_limite_str)  # Depuración
+            query = query.filter(Pago.fecha_pago >= fecha_limite_str)  # Comparar como cadena
+
+    # Filtrar por estado si se selecciona uno
+    if estado:
+        query = query.filter(Pago.estado == estado)
+
+    # Ordenar por Cliente -> Préstamo Grupal -> Fecha de Pago
+    pagos = query.order_by(Pago.cliente_id, PrestamoGrupal.id, Pago.fecha_pago.desc()).all()
+
+    return render_template('reportes/pagos_xfecha.html', pagos=pagos)
+
 
 @reportes_bp.route('/pagos_proximos')
 def pagos_proximos():

@@ -44,8 +44,18 @@
                     </option>
                     {% endfor %}
                 </select>
-                
             </div>
+            <div class="col-md-4">
+                <label for="estado" class="form-label">Estado del Pago</label>
+                <select class="form-select" name="estado">
+                    <option value="">Todos</option>
+                    <option value="Pendiente" {% if request.args.get('estado') == "Pendiente" %}selected{% endif %}>Pendiente</option>
+                    <option value="Pagado" {% if request.args.get('estado') == "Pagado" %}selected{% endif %}>Pagado</option>
+                    <option value="Pagado" {% if request.args.get('estado') == "Incompleto" %}selected{% endif %}>Incompleto</option>
+                    <option value="Pagado" {% if request.args.get('estado') == "Atrasado" %}selected{% endif %}>Atrasado</option>
+                </select>
+            </div>
+            
         </div>
         <div class="text-center mt-3">
             <button type="submit" class="btn btn-primary">Filtrar</button>
@@ -79,7 +89,7 @@
                 <td>{{ pago.id }}</td>
                 <td>{{ pago.cliente.nombre }} {{ pago.cliente.apellido }}</td>
                 <td>{{ pago.cliente.grupo.nombre if pago.cliente.grupo else 'N/A' }}</td>
-                <td>{{ pago.prestamo_individual.prestamo_grupal.id if pago.prestamo_individual.prestamo_grupal else 'N/A' }}</td>
+                <td>{{ pago.prestamo_individual.prestamo_grupal.fecha_desembolso if pago.prestamo_individual.prestamo_grupal else 'N/A' }}</td>
                 <td>S/. {{ pago.monto_pagado }}</td>
                 <td>{{ pago.fecha_pago.strftime('%d-%m-%Y') }}</td>
                 <td>{{ pago.estado }}</td>
