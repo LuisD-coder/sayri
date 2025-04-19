@@ -123,29 +123,34 @@ def pagos_xfecha():
     pagos = []
     query = Pago.query.join(Pago.prestamo_individual).join(PrestamoGrupal)
 
-    # Depuración: Verificar el filtro de fecha recibido
+    # Verificar el filtro de fecha recibido
     print("Filtro de fecha seleccionado:", rango_fecha)
 
-    # Aplicar filtro de fecha con conversión a string en formato 'YYYY-MM-DD'
-    fecha_limite = None
-    if rango_fecha:
-        hoy = datetime.today()
-        if rango_fecha == "ultima_semana":
-            fecha_limite = hoy - timedelta(days=7)
-        elif rango_fecha == "ultimo_mes":
-            fecha_limite = hoy - timedelta(days=30)
+    # Aplicar filtro dentro del intervalo de fechas correcto
+    fecha_inicio = None
+    fecha_fin = datetime.today()  # Hasta el día actual
 
-        if fecha_limite:
-            fecha_limite_str = fecha_limite.strftime('%Y-%m-%d')  # Convertir a cadena
-            print("Fecha límite aplicada:", fecha_limite_str)  # Depuración
-            query = query.filter(Pago.fecha_pago >= fecha_limite_str)  # Comparar como cadena
+    if rango_fecha == "ultima_semana":
+        fecha_inicio = fecha_fin - timedelta(days=7)
+    elif rango_fecha == "ultimo_mes":
+        fecha_inicio = fecha_fin - timedelta(days=30)
+
+    if fecha_inicio:
+        fecha_inicio_str = fecha_inicio.strftime('%Y-%m-%d')
+        fecha_fin_str = fecha_fin.strftime('%Y-%m-%d')
+        print(f"Filtrando pagos entre {fecha_inicio_str} y {fecha_fin_str}")  # Depuración
+
+        # Filtrar pagos que estén dentro del rango (no después de la fecha límite)
+        query = query.filter(db.func.DATE(Pago.fecha_pago) >= fecha_inicio_str, db.func.DATE(Pago.fecha_pago) <= fecha_fin_str)
 
     # Filtrar por estado si se selecciona uno
     if estado:
         query = query.filter(Pago.estado == estado)
 
-    # Ordenar por Cliente -> Préstamo Grupal -> Fecha de Pago
+    # Ejecutar consulta y depurar cuántos pagos se obtienen
     pagos = query.order_by(Pago.cliente_id, PrestamoGrupal.id, Pago.fecha_pago.desc()).all()
+    
+    print(f"Número de pagos filtrados dentro del rango: {len(pagos)}")
 
     return render_template('reportes/pagos_xfecha.html', pagos=pagos)
 

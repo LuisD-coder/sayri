@@ -34,6 +34,9 @@
         </div>
     </form>
 
+    <!-- Mostrar número de pagos filtrados para depuración -->
+    <p class="text-center">Total de pagos filtrados: {{ pagos|length }}</p>
+
     <!-- Mostrar tabla solo si hay resultados -->
     {% if pagos %}
     <table class="table table-dark table-striped mt-4">
@@ -56,7 +59,7 @@
                 <td>{{ pago.cliente.grupo.nombre if pago.cliente.grupo else 'N/A' }}</td>
                 <td>{{ pago.prestamo_individual.prestamo_grupal.id if pago.prestamo_individual.prestamo_grupal else 'N/A' }}</td>
                 <td>S/. {{ pago.monto_pagado }}</td>
-                <td>{{ pago.fecha_pago.strftime('%d-%m-%Y') }}</td>
+                <td>{{ pago.fecha_pago }}</td> <!-- No usar strftime si ya es 'YYYY-MM-DD' -->
                 <td>{{ pago.estado }}</td>
             </tr>
             {% endfor %}
