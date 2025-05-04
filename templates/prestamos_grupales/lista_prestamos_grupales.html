@@ -50,6 +50,13 @@
                                     <i class="bi bi-file-earmark-pdf"></i> Generar Contrato
                                 </a>
                             </div>
+                            <!-- Botón para eliminar préstamo grupal -->
+<form method="POST" action="{{ url_for('prestamos_grupales.eliminar_prestamo_grupal', prestamo_grupal_id=prestamo.id) }}" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este préstamo grupal?')">
+    <button type="submit" class="btn btn-sm btn-outline-danger">
+        <i class="bi bi-trash"></i> Eliminar
+    </button>
+</form>
+
                         </div>
                     </div>
                 </div>

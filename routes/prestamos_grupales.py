@@ -65,6 +65,23 @@ def lista_prestamos_grupales():
                            selected_grupo_id=grupo_id)
 
 
+@prestamos_grupales_bp.route('/eliminar/<int:prestamo_grupal_id>', methods=['POST'])
+@login_required
+def eliminar_prestamo_grupal(prestamo_grupal_id):
+    prestamo = PrestamoGrupal.query.get_or_404(prestamo_grupal_id)
+    grupo_id = prestamo.grupo_id  # Guardamos el grupo seleccionado antes de eliminar
+
+    try:
+        db.session.delete(prestamo)
+        db.session.commit()
+        return redirect(url_for('prestamos_grupales.lista_prestamos_grupales', grupo_id=grupo_id))  # Mantiene la selección del grupo
+    except Exception as e:
+        db.session.rollback()
+        return f"Error al eliminar el préstamo grupal: {str(e)}", 500
+
+
+
+
 
 MONTOS_PAGADOS = {
     500: 151, 600: 181, 700: 211, 800: 241, 900: 271,
