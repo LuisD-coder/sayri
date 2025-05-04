@@ -68,8 +68,9 @@
                             {% if pagos_filtrados %}
                             <center><strong>{{ grupo_nombre }}</strong></center>                       
                             {% for pago in pagos_filtrados %}
-                                <p>👤 {{ pago.cliente.nombre }} {{ pago.cliente.apellido }} <br>
-                                   💰 S/. {{ pago.monto_pagado }}</p>
+                            <p>{{ pago.cliente.nombre }} {{ pago.cliente.apellido }} <br>
+                              C: S/. {{ pago.prestamo_individual.obtener_numero_cuota() }}</p>
+                             
                             {% endfor %}
                             {% endif %}
                         {% endfor %}

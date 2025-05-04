@@ -27,4 +27,10 @@ class PrestamoIndividual(db.Model):
 
         return float(monto_pagado)  # Conversión a float para evitar problemas con Decimal
 
-
+    def obtener_numero_cuota(self):
+        cuotas = {
+            500: 151, 600: 181, 700: 211, 800: 241, 900: 271,
+            1000: 302, 1100: 331, 1200: 361, 1300: 391,
+            1400: 421, 1500: 451
+        }
+        return cuotas.get(self.monto, None)  # Devuelve la cuota o None si el monto no está en la tabla
