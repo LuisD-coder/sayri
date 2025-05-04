@@ -4,15 +4,15 @@
 
 {% block content %}
 <div class="container">
-    <h2 class="text-center mb-4">Reporte de Pagos por Fecha</h2>
+    <h2 class="text-center mb-4">Reporte de Pagos por Última Semana</h2>
 
     <!-- Filtros -->
     <form method="GET" class="mb-4">
         <div class="row g-3">
             <div class="col-md-4">
                 <label for="rango_fecha" class="form-label">Filtrar por Fecha</label>
-                <select class="form-select" name="rango_fecha">
-                    <option value="">Todos</option>
+                <select class="form-select" name="rango_fecha" required>
+                    <option value="" disabled selected>Seleccione un período</option>
                     <option value="ultima_semana" {% if request.args.get('rango_fecha') == "ultima_semana" %}selected{% endif %}>Última Semana</option>
                     <option value="ultimo_mes" {% if request.args.get('rango_fecha') == "ultimo_mes" %}selected{% endif %}>Último Mes</option>
                 </select>
@@ -20,8 +20,8 @@
 
             <div class="col-md-4">
                 <label for="estado" class="form-label">Estado del Pago</label>
-                <select class="form-select" name="estado">
-                    <option value="">Todos</option>
+                <select class="form-select" name="estado" required>
+                    <option value="" disabled selected>Seleccione un estado</option>
                     <option value="Pendiente" {% if request.args.get('estado') == "Pendiente" %}selected{% endif %}>Pendiente</option>
                     <option value="Pagado" {% if request.args.get('estado') == "Pagado" %}selected{% endif %}>Pagado</option>
                     <option value="Incompleto" {% if request.args.get('estado') == "Incompleto" %}selected{% endif %}>Incompleto</option>
@@ -34,39 +34,71 @@
         </div>
     </form>
 
-    <!-- Mostrar número de pagos filtrados para depuración -->
-    <p class="text-center">Total de pagos filtrados: {{ pagos|length }}</p>
+    {% if request.args.get('rango_fecha') and request.args.get('estado') %}  
 
-    <!-- Mostrar tabla solo si hay resultados -->
-    {% if pagos %}
-    <table class="table table-dark table-striped mt-4">
-        <thead>
-            <tr>
-                <th>#</th>
-                <th>Cliente</th>
-                <th>Grupo</th>
-                <th>Préstamo Grupal</th>
-                <th>Monto Pagado</th>
-                <th>Fecha de Pago</th>
-                <th>Estado</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for pago in pagos %}
-            <tr>
-                <td>{{ pago.id }}</td>
-                <td>{{ pago.cliente.nombre }} {{ pago.cliente.apellido }}</td>
-                <td>{{ pago.cliente.grupo.nombre if pago.cliente.grupo else 'N/A' }}</td>
-                <td>{{ pago.prestamo_individual.prestamo_grupal.id if pago.prestamo_individual.prestamo_grupal else 'N/A' }}</td>
-                <td>S/. {{ pago.monto_pagado }}</td>
-                <td>{{ pago.fecha_pago }}</td> <!-- No usar strftime si ya es 'YYYY-MM-DD' -->
-                <td>{{ pago.estado }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <!-- Botón para imprimir solo la tabla -->
+    <div class="text-center mt-3">
+        <button class="btn btn-success" onclick="imprimirTabla()">🖨 Imprimir Reporte</button>
+    </div>
+
+    <!-- Contenedor de la tabla -->
+    <div id="reporteTabla">
+        {% if pagos and fecha_inicio %}
+        <table class="table table-bordered mt-4">
+            <thead>
+                <tr>
+                    {% for dia in range(7) %}
+                    {% set fecha_dia = fecha_inicio + timedelta(days=dia) %}
+                    <th>{{ ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"][dia] }} <br>
+                        <small>📅 {{ fecha_dia.strftime('%d-%m-%Y') }}</small>
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    {% for dia in range(7) %}
+                    {% set fecha_dia = fecha_inicio + timedelta(days=dia) %}
+                    <td>
+                        {% for agrupacion in pagos | groupby(attribute='prestamo_individual.prestamo_grupal.grupo.nombre') %}
+                            {% set grupo_nombre = agrupacion.grouper %}
+                            {% set pagos_list = agrupacion.list %}
+                            {% set pagos_filtrados = pagos_list | selectattr("fecha_pago", "equalto", fecha_dia.date()) | list %}
+
+                            {% if pagos_filtrados %}
+                            <center><strong>{{ grupo_nombre }}</strong></center>                       
+                            {% for pago in pagos_filtrados %}
+                                <p>👤 {{ pago.cliente.nombre }} {{ pago.cliente.apellido }} <br>
+                                   💰 S/. {{ pago.monto_pagado }}</p>
+                            {% endfor %}
+                            {% endif %}
+                        {% endfor %}
+                    </td>
+                    {% endfor %}
+                </tr>
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-center text-warning mt-4">No hay pagos registrados en la última semana.</p>
+        {% endif %}
+    </div>
+
     {% else %}
-    <p class="text-center text-warning mt-4">No hay pagos realizados en este período.</p>
+    <p class="text-center text-danger mt-4">Por favor, seleccione un filtro de fecha y estado antes de cargar la información.</p>
     {% endif %}
 </div>
+
+<!-- Script para imprimir solo la tabla -->
+<script>
+    function imprimirTabla() {
+        var contenido = document.getElementById('reporteTabla').innerHTML;
+        var ventana = window.open('', '', 'height=600,width=800');
+        ventana.document.write('<html><head><title>Reporte de Pagos</title></head><body>');
+        ventana.document.write(contenido);
+        ventana.document.write('</body></html>');
+        ventana.document.close();
+        ventana.print();
+    }
+</script>
+
 {% endblock %}

@@ -120,6 +120,10 @@ def pagos_xfecha():
     rango_fecha = request.args.get('rango_fecha')
     estado = request.args.get('estado')
 
+    # Si no hay filtros seleccionados, no ejecutar consulta
+    if not rango_fecha or not estado:
+        return render_template('reportes/pagos_xfecha.html', pagos=[], fecha_inicio=None, timedelta=timedelta)
+
     pagos = []
     query = Pago.query.join(Pago.prestamo_individual).join(PrestamoGrupal)
 
@@ -131,7 +135,11 @@ def pagos_xfecha():
     fecha_fin = datetime.today()  # Hasta el día actual
 
     if rango_fecha == "ultima_semana":
-        fecha_inicio = fecha_fin - timedelta(days=7)
+        # Obtener el lunes de la semana actual o siguiente
+        dia_actual = fecha_fin.weekday()  # Monday = 0, Sunday = 6
+        fecha_inicio = fecha_fin - timedelta(days=dia_actual) + timedelta(days=7)  # Ajustar semana
+        fecha_fin = fecha_inicio + timedelta(days=6)  # Obtener el domingo de esa semana
+
     elif rango_fecha == "ultimo_mes":
         fecha_inicio = fecha_fin - timedelta(days=30)
 
@@ -140,7 +148,55 @@ def pagos_xfecha():
         fecha_fin_str = fecha_fin.strftime('%Y-%m-%d')
         print(f"Filtrando pagos entre {fecha_inicio_str} y {fecha_fin_str}")  # Depuración
 
-        # Filtrar pagos que estén dentro del rango (no después de la fecha límite)
+        # Filtrar pagos solo dentro del rango exacto
+        query = query.filter(db.func.DATE(Pago.fecha_pago) >= fecha_inicio_str, db.func.DATE(Pago.fecha_pago) <= fecha_fin_str)
+
+    # Filtrar por estado si se selecciona uno
+    if estado:
+        query = query.filter(Pago.estado == estado)
+
+    # Ejecutar consulta solo si los filtros han sido seleccionados
+    pagos = query.order_by(Pago.cliente_id, PrestamoGrupal.id, Pago.fecha_pago.desc()).all()
+    
+    print(f"Número de pagos filtrados dentro del rango: {len(pagos)}")
+
+    return render_template('reportes/pagos_xfecha.html', pagos=pagos, fecha_inicio=fecha_inicio, timedelta=timedelta)
+
+    rango_fecha = request.args.get('rango_fecha')
+    estado = request.args.get('estado')
+
+    pagos = []
+    query = Pago.query.join(Pago.prestamo_individual).join(PrestamoGrupal)
+
+    # Verificar el filtro de fecha recibido
+    print("Filtro de fecha seleccionado:", rango_fecha)
+
+    # Aplicar filtro dentro del intervalo de fechas correcto
+    fecha_inicio = None
+    fecha_fin = datetime.today()  # Hasta el día actual
+
+    if rango_fecha == "ultima_semana":
+        # Obtener el lunes de la semana actual o siguiente
+        dia_actual = fecha_fin.weekday()  # Monday = 0, Sunday = 6
+
+        # Si hoy es lunes, usamos este mismo lunes. Si no, buscamos el lunes más cercano.
+        fecha_inicio = fecha_fin - timedelta(days=dia_actual)  # Retrocede hasta el lunes más cercano
+
+        # Ahora ajustamos para que tome el lunes de la siguiente semana
+        fecha_inicio += timedelta(days=7)  # Nos movemos una semana adelante
+
+        fecha_fin = fecha_inicio + timedelta(days=6)  # Obtiene el domingo de esa semana
+
+
+    elif rango_fecha == "ultimo_mes":
+        fecha_inicio = fecha_fin - timedelta(days=30)
+
+    if fecha_inicio:
+        fecha_inicio_str = fecha_inicio.strftime('%Y-%m-%d')
+        fecha_fin_str = fecha_fin.strftime('%Y-%m-%d')
+        print(f"Filtrando pagos entre {fecha_inicio_str} y {fecha_fin_str}")  # Depuración
+
+        # Filtrar pagos solo dentro del rango exacto (lunes a domingo)
         query = query.filter(db.func.DATE(Pago.fecha_pago) >= fecha_inicio_str, db.func.DATE(Pago.fecha_pago) <= fecha_fin_str)
 
     # Filtrar por estado si se selecciona uno
@@ -151,8 +207,12 @@ def pagos_xfecha():
     pagos = query.order_by(Pago.cliente_id, PrestamoGrupal.id, Pago.fecha_pago.desc()).all()
     
     print(f"Número de pagos filtrados dentro del rango: {len(pagos)}")
+    if fecha_inicio is None:
+        fecha_inicio = datetime.today()  # Si no hay rango seleccionado, usar la fecha actual
 
-    return render_template('reportes/pagos_xfecha.html', pagos=pagos)
+
+    return render_template('reportes/pagos_xfecha.html', pagos=pagos, fecha_inicio=fecha_inicio, timedelta=timedelta)
+
 
 
 @reportes_bp.route('/pagos_proximos')
