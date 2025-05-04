@@ -30,12 +30,11 @@
                     {% if current_user.is_authenticated and current_user.rol.nombre == 'admin' %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle text-light" href="#" id="reportesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="bi bi-file-earmark-text"></i> Reportes
+                            <i class="bi bi-file-earmark-text"></i> Agenda
                         </a>
                         <ul class="dropdown-menu bg-dark border-light" aria-labelledby="reportesDropdown">
-                            <li><a class="dropdown-item text-light" href="{{ url_for('reportes.pagos_realizados') }}">Pagos</a></li>
-                            <li><a class="dropdown-item text-light" href="{{ url_for('reportes.pagos_xfecha') }}">Por Fecha</a></li>
-                            <li><a class="dropdown-item text-light" href="{{ url_for('reportes.pagos_proximos') }}">Pagos Próximos</a></li>
+                            <li><a class="dropdown-item text-light" href="{{ url_for('reportes.pagos_xfecha') }}">Agenda Semanal</a></li>
+                            <li><a class="dropdown-item text-light" href="{{ url_for('reportes.pagos_proximos') }}">Cuotas Atrasadas</a></li>
                         </ul>
                     </li>
                     

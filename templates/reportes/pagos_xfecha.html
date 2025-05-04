@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Reportes por Fecha{% endblock %}
+{% block title %}Agenda Semanal{% endblock %}
 
 {% block content %}
 <div class="container">
@@ -13,19 +13,9 @@
                 <label for="rango_fecha" class="form-label">Filtrar por Fecha</label>
                 <select class="form-select" name="rango_fecha" required>
                     <option value="" disabled selected>Seleccione un período</option>
-                    <option value="ultima_semana" {% if request.args.get('rango_fecha') == "ultima_semana" %}selected{% endif %}>Última Semana</option>
-                    <option value="ultimo_mes" {% if request.args.get('rango_fecha') == "ultimo_mes" %}selected{% endif %}>Último Mes</option>
-                </select>
-            </div>
-
-            <div class="col-md-4">
-                <label for="estado" class="form-label">Estado del Pago</label>
-                <select class="form-select" name="estado" required>
-                    <option value="" disabled selected>Seleccione un estado</option>
-                    <option value="Pendiente" {% if request.args.get('estado') == "Pendiente" %}selected{% endif %}>Pendiente</option>
-                    <option value="Pagado" {% if request.args.get('estado') == "Pagado" %}selected{% endif %}>Pagado</option>
-                    <option value="Incompleto" {% if request.args.get('estado') == "Incompleto" %}selected{% endif %}>Incompleto</option>
-                    <option value="Atrasado" {% if request.args.get('estado') == "Atrasado" %}selected{% endif %}>Atrasado</option>
+                    <option value="ultima_semana" {% if request.args.get('rango_fecha') == "ultima_semana" %}selected{% endif %}>Semana 1</option>
+                    <option value="semana_2" {% if request.args.get('rango_fecha') == "semana_2" %}selected{% endif %}>Semana 2</option>
+                    <option value="semana_3" {% if request.args.get('rango_fecha') == "semana_3" %}selected{% endif %}>Semana 3</option>
                 </select>
             </div>
         </div>
@@ -34,7 +24,7 @@
         </div>
     </form>
 
-    {% if request.args.get('rango_fecha') and request.args.get('estado') %}  
+    {% if request.args.get('rango_fecha')%}  
 
     <!-- Botón para imprimir solo la tabla -->
     <div class="text-center mt-3">

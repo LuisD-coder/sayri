@@ -38,10 +38,30 @@ def nuevo_cliente():
 
 
 
-# Listar todos los clientes
 @clientes_bp.route('/')
 @login_required
 def lista_clientes():
+    page = request.args.get('page', 1, type=int)
+    grupo_id = request.args.get('grupo_id', type=int)
+    search = request.args.get('search', '').strip()
+
+    # Si no hay filtros seleccionados, no ejecutar la consulta
+    if not grupo_id and not search:
+        return render_template('clientes/lista_clientes.html', clientes=None, grupos=Grupo.query.all(), selected_grupo=None)
+
+    query = Cliente.query
+    if grupo_id:
+        query = query.filter_by(grupo_id=grupo_id)
+    if search:
+        query = query.filter(
+            Cliente.nombre.ilike(f"%{search}%") | Cliente.dni.ilike(f"%{search}%")
+        )
+
+    clientes = query.paginate(page=page, per_page=10)  # 10 clientes por página
+    grupos = Grupo.query.all()  # Obtener todos los grupos
+
+    return render_template('clientes/lista_clientes.html', clientes=clientes, grupos=grupos, selected_grupo=grupo_id)
+
     page = request.args.get('page', 1, type=int)
     grupo_id = request.args.get('grupo_id', type=int)
     search = request.args.get('search', '').strip()

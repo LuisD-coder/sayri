@@ -118,10 +118,10 @@ def pagos_realizados():
 @reportes_bp.route('/pagos_xfecha')
 def pagos_xfecha():
     rango_fecha = request.args.get('rango_fecha')
-    estado = request.args.get('estado')
+    #estado = request.args.get('estado')
 
     # Si no hay filtros seleccionados, no ejecutar consulta
-    if not rango_fecha or not estado:
+    if not rango_fecha:
         return render_template('reportes/pagos_xfecha.html', pagos=[], fecha_inicio=None, timedelta=timedelta)
 
     pagos = []
@@ -140,8 +140,15 @@ def pagos_xfecha():
         fecha_inicio = fecha_fin - timedelta(days=dia_actual) + timedelta(days=7)  # Ajustar semana
         fecha_fin = fecha_inicio + timedelta(days=6)  # Obtener el domingo de esa semana
 
-    elif rango_fecha == "ultimo_mes":
-        fecha_inicio = fecha_fin - timedelta(days=30)
+    elif rango_fecha == "semana_2":
+        dia_actual = fecha_fin.weekday()
+        fecha_inicio = fecha_fin - timedelta(days=dia_actual) + timedelta(days=14)  # Segunda semana adelante
+        fecha_fin = fecha_inicio + timedelta(days=6)
+
+    elif rango_fecha == "semana_3":
+        dia_actual = fecha_fin.weekday()
+        fecha_inicio = fecha_fin - timedelta(days=dia_actual) + timedelta(days=21)  # Segunda semana adelante
+        fecha_fin = fecha_inicio + timedelta(days=6)
 
     if fecha_inicio:
         fecha_inicio_str = fecha_inicio.strftime('%Y-%m-%d')
@@ -152,8 +159,8 @@ def pagos_xfecha():
         query = query.filter(db.func.DATE(Pago.fecha_pago) >= fecha_inicio_str, db.func.DATE(Pago.fecha_pago) <= fecha_fin_str)
 
     # Filtrar por estado si se selecciona uno
-    if estado:
-        query = query.filter(Pago.estado == estado)
+    #if estado:
+    #    query = query.filter(Pago.estado == estado)
 
     # Ejecutar consulta solo si los filtros han sido seleccionados
     pagos = query.order_by(Pago.cliente_id, PrestamoGrupal.id, Pago.fecha_pago.desc()).all()
