@@ -89,7 +89,7 @@ MONTOS_PAGADOS = {
     1500: 451
 }
 
-# Asignar préstamos individuales a los clientes dentro de un préstamo grupal
+# Asignar préstamos individuales a los clientes dentro de un préstamo grupallll
 @prestamos_grupales_bp.route('/<int:prestamo_grupal_id>/asignar_prestamos_individuales', methods=['GET', 'POST'])
 @login_required
 def asignar_prestamos_individuales(prestamo_grupal_id):
