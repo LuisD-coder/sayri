@@ -268,12 +268,8 @@ def generar_contrato_logic(cliente_id, prestamo_grupal):
     cliente = Cliente.query.get_or_404(cliente_id)
 
     # Obtener el préstamo individual correcto dentro del préstamo grupal
-    prestamo_individual = None
-    for prestamo in prestamo_grupal.prestamos_individuales:
-        if prestamo.cliente_id == cliente.id:
-            prestamo_individual = prestamo
-            break
-
+    prestamo_individual = PrestamoIndividual.query.filter_by(cliente_id=cliente.id, prestamo_grupal_id=prestamo_grupal.id).first()
+    
     if prestamo_individual is None:
         raise ValueError(f"No se encontró el préstamo para el cliente {cliente.nombre} {cliente.apellido} en este préstamo grupal.")
 
@@ -337,24 +333,34 @@ def generar_contrato_logic(cliente_id, prestamo_grupal):
                 color=(0, 0, 0)
             )
 
-    # Guardar el contrato en memoria y en la base de datos
+    # Guardar el contrato en memoria
     buffer = io.BytesIO()
     doc.save(buffer)
     buffer.seek(0)
+    doc.close()  # Liberar recursos antes de cerrar el buffer
 
     nombre_archivo = f"contrato_{cliente.nombre.upper()}_{cliente.apellido.upper()}_{monto_cliente}.pdf"
 
-    nuevo_contrato = Contrato(
-        nombre_archivo=nombre_archivo,
-        archivo=buffer.getvalue(),
-        cliente_id=cliente.id,
-        prestamo_individual_id=prestamo_individual.id
-    )
+    # Buscar si ya existe un contrato para el cliente y su préstamo individual
+    contrato_existente = Contrato.query.filter_by(cliente_id=cliente.id, prestamo_individual_id=prestamo_individual.id).first()
 
-    db.session.add(nuevo_contrato)
+    if contrato_existente:
+        # Actualizar el contrato existente con el nuevo archivo PDF
+        contrato_existente.archivo = buffer.getvalue()
+        contrato_existente.nombre_archivo = nombre_archivo
+    else:
+        # Crear un nuevo contrato si no existe uno previo
+        nuevo_contrato = Contrato(
+            nombre_archivo=nombre_archivo,
+            archivo=buffer.getvalue(),
+            cliente_id=cliente.id,
+            prestamo_individual_id=prestamo_individual.id
+        )
+        db.session.add(nuevo_contrato)
+
+    # Guardar cambios en la base de datos
     db.session.commit()
+    
+    buffer.close()  # Liberar memoria después de guardar
 
-    # Liberar recursos del buffer
-    buffer.close()
-
-    return send_file(io.BytesIO(nuevo_contrato.archivo), as_attachment=True, download_name=nombre_archivo, mimetype='application/pdf')
+    return send_file(io.BytesIO(contrato_existente.archivo if contrato_existente else nuevo_contrato.archivo), as_attachment=True, download_name=nombre_archivo, mimetype='application/pdf')
