@@ -3,36 +3,108 @@
 {% block title %}Agenda Semanal{% endblock %}
 
 {% block content %}
+
+<style>
+    /* ... (tu sección <style> actual, sin cambios en CSS) ... */
+
+    /* Estilos base de la tabla */
+    #reporteTabla table {
+        table-layout: fixed; 
+        width: 100%; 
+    }
+
+    #reporteTabla th,
+    #reporteTabla td {
+        width: calc(100% / 7); 
+        vertical-align: top; 
+        overflow-wrap: break-word; 
+        word-wrap: break-word; 
+        white-space: normal; 
+    }
+    
+    /* Alineación de texto general dentro de las celdas a la izquierda. */
+    #reporteTabla td {
+        text-align: left; 
+    }
+
+    /* Margen entre párrafos de pago. */
+    #reporteTabla td p {
+        margin-bottom: 0.5rem; 
+    }
+
+    /* Estilo para el nombre del grupo. */
+    #reporteTabla td strong { 
+        display: block; 
+        margin-bottom: 0.5rem;
+        padding-bottom: 0.2rem;
+        border-bottom: 1px solid #eee; 
+    }
+
+    /* Media query para pantallas más pequeñas. */
+    @media (max-width: 768px) {
+        #reporteTabla table {
+            display: block; 
+            overflow-x: auto; 
+            white-space: nowrap; 
+        }
+        #reporteTabla th,
+        #reporteTabla td {
+            min-width: 150px; 
+            width: auto; 
+            white-space: normal; 
+        }
+    }
+
+    /* Clase para ocultar/mostrar detalles. */
+    .hidden-detail {
+        display: none;
+    }
+
+    /* Clase optimizada para PDF. */
+    .pdf-optimize {
+        font-size: 0.7em; 
+    }
+    .pdf-optimize th,
+    .pdf-optimize td {
+        padding: 3px; 
+    }
+    .pdf-optimize td p {
+        margin-bottom: 0.25rem; 
+    }
+
+    /* Regla para intentar que no rompa los bloques de detalles. */
+    .pdf-optimize .detalle-pago {
+        page-break-inside: avoid !important;
+    }
+</style>
+
 <div class="container">
     <h2 class="text-center mb-4">Agenda Semanal</h2>
 
-    <!-- Filtros -->
-    <form method="GET" class="mb-4">
+    <form method="GET" class="mb-4" id="filtroForm">
         <div class="row g-3">
             <div class="col-md-4">
-                <label for="rango_fecha" class="form-label">Filtrar por Fecha</label>
-                <select class="form-select" name="rango_fecha" required>
-                    <option value="" disabled selected>Seleccione un período</option>
-                    <option value="ultima_semana" {% if request.args.get('rango_fecha') == "ultima_semana" %}selected{% endif %}>Semana 1</option>
+                <label for="rangoFechaSelect" class="form-label">Filtrar por Fecha</label>
+                <select class="form-select" name="rango_fecha" id="rangoFechaSelect" required>
+                    <option value="" disabled {% if not request.args.get('rango_fecha') %}selected{% endif %}>Seleccione un período</option>
+                    <option value="ultima_semana" {% if request.args.get('rango_fecha') == "ultima_semana" %}selected{% endif %}>Semana 1 (Actual)</option>
                     <option value="semana_2" {% if request.args.get('rango_fecha') == "semana_2" %}selected{% endif %}>Semana 2</option>
                     <option value="semana_3" {% if request.args.get('rango_fecha') == "semana_3" %}selected{% endif %}>Semana 3</option>
+                    <option value="semana_4" {% if request.args.get('rango_fecha') == "semana_4" %}selected{% endif %}>Semana 4</option>
                 </select>
             </div>
         </div>
-        <div class="text-center mt-3">
-            <button type="submit" class="btn btn-primary">Filtrar</button>
-        </div>
-    </form>
+        </form>
 
-    {% if request.args.get('rango_fecha')%}  
+    {% if request.args.get('rango_fecha')%} 
 
-    <!-- Botón para imprimir solo la tabla -->
-    <div class="text-center mt-3">
-        <button class="btn btn-success" onclick="imprimirTabla()">🖨 Imprimir Reporte</button>
+    <div class="text-center mt-3 d-flex justify-content-center align-items-center mb-3">
+        <button class="btn btn-primary me-2" onclick="descargarPdf()">⬇️ Descargar PDF</button>
+        
+        <button class="btn btn-info" id="toggleDetallesBtn">Ocultar Detalles</button>
     </div>
 
-    <!-- Contenedor de la tabla -->
-    <div id="reporteTabla">
+    <div id="reporteTabla" {% if fecha_inicio %}data-start-date="{{ fecha_inicio.isoformat() }}"{% endif %}>
         {% if pagos and fecha_inicio %}
         <table class="table table-bordered mt-4">
             <thead>
@@ -53,14 +125,16 @@
                         {% for agrupacion in pagos | groupby(attribute='prestamo_individual.prestamo_grupal.grupo.nombre') %}
                             {% set grupo_nombre = agrupacion.grouper %}
                             {% set pagos_list = agrupacion.list %}
+                            {# Aseguro que la comparación de fechas sea solo con la parte de la fecha, no con la hora. #}
                             {% set pagos_filtrados = pagos_list | selectattr("fecha_pago", "equalto", fecha_dia.date()) | list %}
 
                             {% if pagos_filtrados %}
-                            <center><strong>{{ grupo_nombre }}</strong></center>                       
+                            <strong>{{ grupo_nombre }}</strong>             
                             {% for pago in pagos_filtrados %}
-                            <p>{{ pago.cliente.nombre }} {{ pago.cliente.apellido }} <br>
-                              C: S/. {{ pago.prestamo_individual.obtener_numero_cuota() }}</p>
-                             
+                            <div class="detalle-pago">
+                                <p>{{ pago.cliente.nombre }} {{ pago.cliente.apellido }} <br>
+                                    C: S/. {{ pago.prestamo_individual.obtener_numero_cuota() }}</p>
+                            </div>
                             {% endfor %}
                             {% endif %}
                         {% endfor %}
@@ -70,26 +144,114 @@
             </tbody>
         </table>
         {% else %}
-        <p class="text-center text-warning mt-4">No hay pagos registrados en la última semana.</p>
+        <p class="text-center text-warning mt-4">No hay pagos registrados en el período seleccionado.</p>
         {% endif %}
     </div>
 
     {% else %}
-    <p class="text-center text-danger mt-4">Por favor, seleccione un filtro de fecha y estado antes de cargar la información.</p>
+    <p class="text-center text-danger mt-4">Por favor, seleccione un período para cargar la información.</p>
     {% endif %}
 </div>
 
-<!-- Script para imprimir solo la tabla -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
 <script>
-    function imprimirTabla() {
-        var contenido = document.getElementById('reporteTabla').innerHTML;
-        var ventana = window.open('', '', 'height=600,width=800');
-        ventana.document.write('<html><head><title>Reporte de Pagos</title></head><body>');
-        ventana.document.write(contenido);
-        ventana.document.write('</body></html>');
-        ventana.document.close();
-        ventana.print();
+    // Función para obtener un parámetro de la URL (query string).
+    function getQueryParam(name) {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get(name);
     }
+
+    // Función para calcular el número de semana (ISO 8601).
+    function getWeekNumber(d) {
+        d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+        d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+        var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+        var weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+        return weekNo;
+    }
+
+    // Mi función para descargar PDF.
+    function descargarPdf() {
+        const element = document.getElementById('reporteTabla');
+
+        const startDateString = element.dataset.startDate;
+        let filename = 'agenda_semanal_pagos.pdf'; 
+
+        if (startDateString) {
+            const startDate = new Date(startDateString);
+            
+            const endDate = new Date(startDate);
+            endDate.setDate(startDate.getDate() + 6);
+
+            const startDay = startDate.getDate();
+            const endDay = endDate.getDate();
+            
+            const rangoFecha = getQueryParam('rango_fecha');
+            let numeroSemanaDisplay = '';
+
+            if (rangoFecha === 'ultima_semana') {
+                numeroSemanaDisplay = 'semana1';
+            } else if (rangoFecha === 'semana_2') {
+                numeroSemanaDisplay = 'semana2';
+            } else if (rangoFecha === 'semana_3') {
+                numeroSemanaDisplay = 'semana3';
+            } else if (rangoFecha === 'semana_4') {
+                numeroSemanaDisplay = 'semana4';
+            } else {
+                numeroSemanaDisplay = 'semana_desconocida';
+            }
+
+            filename = `agenda_${startDay}al${endDay}_${numeroSemanaDisplay}.pdf`;
+        }
+        
+        element.classList.add('pdf-optimize');
+
+        const options = {
+            margin:       5, 
+            filename:     filename, 
+            image:        { type: 'jpeg', quality: 0.98 },
+            html2canvas:  { 
+                scale: 1, 
+                scrollY: 0, 
+                windowWidth: element.scrollWidth, 
+                windowHeight: element.scrollHeight 
+            },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+        };
+
+        html2pdf().set(options).from(element).save().then(function() {
+            element.classList.remove('pdf-optimize');
+        });
+    }
+
+    // Mi función para el botón de desplegar/ocultar detalles (sin cambios).
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggleBtn = document.getElementById('toggleDetallesBtn');
+        const detalles = document.querySelectorAll('.detalle-pago'); 
+
+        toggleBtn.addEventListener('click', function() {
+            detalles.forEach(function(detalle) {
+                detalle.classList.toggle('hidden-detail'); 
+            });
+
+            if (toggleBtn.textContent === 'Ocultar Detalles') {
+                toggleBtn.textContent = 'Desplegar Detalles';
+            } else {
+                toggleBtn.textContent = 'Ocultar Detalles';
+            }
+        });
+
+        // ¡NUEVO CÓDIGO! Para la actualización automática del filtro.
+        const rangoFechaSelect = document.getElementById('rangoFechaSelect');
+        const filtroForm = document.getElementById('filtroForm');
+
+        if (rangoFechaSelect && filtroForm) {
+            rangoFechaSelect.addEventListener('change', function() {
+                filtroForm.submit(); // Envía el formulario automáticamente.
+            });
+        }
+    });
 </script>
 
 {% endblock %}

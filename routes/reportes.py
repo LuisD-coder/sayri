@@ -68,156 +68,91 @@ def pagos_realizados():
 
 
 
-
-#@login_required
-#def pagos_realizados():
-    grupo_id = request.args.get('grupo_id')
-    prestamo_grupal_id = request.args.get('prestamo_grupal_id')
-    cliente_id = request.args.get('cliente_id')
-
-    pagos = []
-    if grupo_id or prestamo_grupal_id or cliente_id:
-        query = Pago.query.join(Pago.cliente).join(Pago.prestamo_individual).order_by(Pago.fecha_pago.desc())
-        if grupo_id:
-            query = query.filter(Cliente.grupo_id == grupo_id)
-        if prestamo_grupal_id:
-            query = query.filter(Pago.prestamo_individual.has(prestamo_grupal_id=prestamo_grupal_id))
-        if cliente_id:
-            query = query.filter(Pago.cliente_id == cliente_id)
-        pagos = query.all()
-
-    grupos = Grupo.query.all()
-    return render_template('reportes/pagos_realizados.html', pagos=pagos, grupos=grupos)
-    # Obtener valores de filtros
-    grupo_id = request.args.get('grupo_id')
-    prestamo_grupal_id = request.args.get('prestamo_grupal_id')
-    cliente_id = request.args.get('cliente_id')
-
-    # Inicialmente, pagos será una lista vacía
-    pagos = []
-    
-    # Solo ejecuta la consulta si se aplica algún filtro
-    if grupo_id or prestamo_grupal_id or cliente_id:
-        query = Pago.query.join(Pago.cliente).join(Pago.prestamo_individual).order_by(Pago.fecha_pago.desc())
-        if grupo_id:
-            query = query.filter(Cliente.grupo_id == grupo_id)
-        if prestamo_grupal_id:
-            query = query.filter(Pago.prestamo_individual.has(prestamo_grupal_id=prestamo_grupal_id))
-        if cliente_id:
-            query = query.filter(Pago.cliente_id == cliente_id)
-        pagos = query.all()
-
-    # Obtener listas para los filtros
-    grupos = Grupo.query.all()
-    prestamos_grupales = PrestamoGrupal.query.all()
-    clientes = Cliente.query.all()
-
-    return render_template('reportes/pagos_realizados.html', pagos=pagos, grupos=grupos, prestamos_grupales=prestamos_grupales, clientes=clientes)
-
-
 @reportes_bp.route('/pagos_xfecha')
+@login_required # Asegura que solo usuarios autenticados puedan acceder a esta vista
 def pagos_xfecha():
     rango_fecha = request.args.get('rango_fecha')
-    #estado = request.args.get('estado')
 
-    # Si no hay filtros seleccionados, no ejecutar consulta
+    # Si no hay filtro de fecha seleccionado (primera carga de la página),
+    # renderizar la plantilla sin datos de pagos pero con el timedelta disponible.
     if not rango_fecha:
         return render_template('reportes/pagos_xfecha.html', pagos=[], fecha_inicio=None, timedelta=timedelta)
 
     pagos = []
+    # Inicializa la consulta base con los joins necesarios
     query = Pago.query.join(Pago.prestamo_individual).join(PrestamoGrupal)
 
-    # Verificar el filtro de fecha recibido
-    print("Filtro de fecha seleccionado:", rango_fecha)
+    # -------------------------------------------------------------------
+    # Lógica para determinar el rango de fechas de la semana seleccionada
+    # -------------------------------------------------------------------
 
-    # Aplicar filtro dentro del intervalo de fechas correcto
+    fecha_hoy = datetime.today()
+    # weekday() devuelve 0 para lunes, 6 para domingo
+    dia_semana_hoy = fecha_hoy.weekday() 
+
+    # Calcula el Lunes de la semana actual (00:00:00)
+    # Resta los días necesarios para llegar al lunes de la semana en curso.
+    fecha_lunes_semana_actual = fecha_hoy - timedelta(days=dia_semana_hoy)
+    
+    # Aseguramos que la fecha_lunes_semana_actual no tenga información de tiempo (solo fecha)
+    fecha_lunes_semana_actual = fecha_lunes_semana_actual.replace(hour=0, minute=0, second=0, microsecond=0)
+
     fecha_inicio = None
-    fecha_fin = datetime.today()  # Hasta el día actual
+    fecha_fin = None
 
-    if rango_fecha == "ultima_semana":
-        # Obtener el lunes de la semana actual o siguiente
-        dia_actual = fecha_fin.weekday()  # Monday = 0, Sunday = 6
-        fecha_inicio = fecha_fin - timedelta(days=dia_actual) + timedelta(days=7)  # Ajustar semana
-        fecha_fin = fecha_inicio + timedelta(days=6)  # Obtener el domingo de esa semana
+    if rango_fecha == "ultima_semana": # Corresponde a "Semana 1 (Actual)"
+        fecha_inicio = fecha_lunes_semana_actual
+        fecha_fin = fecha_inicio + timedelta(days=6) # El domingo de esa misma semana
 
-    elif rango_fecha == "semana_2":
-        dia_actual = fecha_fin.weekday()
-        fecha_inicio = fecha_fin - timedelta(days=dia_actual) + timedelta(days=14)  # Segunda semana adelante
+    elif rango_fecha == "semana_2": # La siguiente semana
+        fecha_inicio = fecha_lunes_semana_actual + timedelta(days=7)
         fecha_fin = fecha_inicio + timedelta(days=6)
 
-    elif rango_fecha == "semana_3":
-        dia_actual = fecha_fin.weekday()
-        fecha_inicio = fecha_fin - timedelta(days=dia_actual) + timedelta(days=21)  # Segunda semana adelante
+    elif rango_fecha == "semana_3": # Dos semanas después de la actual
+        fecha_inicio = fecha_lunes_semana_actual + timedelta(days=14)
         fecha_fin = fecha_inicio + timedelta(days=6)
 
-    if fecha_inicio:
-        fecha_inicio_str = fecha_inicio.strftime('%Y-%m-%d')
-        fecha_fin_str = fecha_fin.strftime('%Y-%m-%d')
-        print(f"Filtrando pagos entre {fecha_inicio_str} y {fecha_fin_str}")  # Depuración
-
-        # Filtrar pagos solo dentro del rango exacto
-        query = query.filter(db.func.DATE(Pago.fecha_pago) >= fecha_inicio_str, db.func.DATE(Pago.fecha_pago) <= fecha_fin_str)
-
-    # Filtrar por estado si se selecciona uno
-    #if estado:
-    #    query = query.filter(Pago.estado == estado)
-
-    # Ejecutar consulta solo si los filtros han sido seleccionados
-    pagos = query.order_by(Pago.cliente_id, PrestamoGrupal.id, Pago.fecha_pago.desc()).all()
+    elif rango_fecha == "semana_4": # Tres semanas después de la actual
+        fecha_inicio = fecha_lunes_semana_actual + timedelta(days=21)
+        fecha_fin = fecha_inicio + timedelta(days=6)
     
-    print(f"Número de pagos filtrados dentro del rango: {len(pagos)}")
+    # -------------------------------------------------------------------
+    # Aplicar el filtro de fecha a la consulta de la base de datos
+    # -------------------------------------------------------------------
 
-    return render_template('reportes/pagos_xfecha.html', pagos=pagos, fecha_inicio=fecha_inicio, timedelta=timedelta)
+    if fecha_inicio and fecha_fin:
+        # Extraer solo la parte de la fecha para la comparación con la DB
+        # Esto es crucial si Pago.fecha_pago es un tipo DATETIME y queremos ignorar la hora.
+        fecha_inicio_comparacion = fecha_inicio.date()
+        fecha_fin_comparacion = fecha_fin.date()
 
-    rango_fecha = request.args.get('rango_fecha')
-    estado = request.args.get('estado')
+        print(f"DEBUG: Filtrando pagos entre {fecha_inicio_comparacion.strftime('%d-%m-%Y')} y {fecha_fin_comparacion.strftime('%d-%m-%Y')}")
 
-    pagos = []
-    query = Pago.query.join(Pago.prestamo_individual).join(PrestamoGrupal)
-
-    # Verificar el filtro de fecha recibido
-    print("Filtro de fecha seleccionado:", rango_fecha)
-
-    # Aplicar filtro dentro del intervalo de fechas correcto
-    fecha_inicio = None
-    fecha_fin = datetime.today()  # Hasta el día actual
-
-    if rango_fecha == "ultima_semana":
-        # Obtener el lunes de la semana actual o siguiente
-        dia_actual = fecha_fin.weekday()  # Monday = 0, Sunday = 6
-
-        # Si hoy es lunes, usamos este mismo lunes. Si no, buscamos el lunes más cercano.
-        fecha_inicio = fecha_fin - timedelta(days=dia_actual)  # Retrocede hasta el lunes más cercano
-
-        # Ahora ajustamos para que tome el lunes de la siguiente semana
-        fecha_inicio += timedelta(days=7)  # Nos movemos una semana adelante
-
-        fecha_fin = fecha_inicio + timedelta(days=6)  # Obtiene el domingo de esa semana
+        # Filtra los pagos cuya fecha_pago cae dentro del rango [fecha_inicio, fecha_fin]
+        # Usamos db.func.DATE() para asegurar que la comparación se haga solo a nivel de día,
+        # sin importar la hora exacta en Pago.fecha_pago.
+        query = query.filter(
+            db.func.DATE(Pago.fecha_pago) >= fecha_inicio_comparacion,
+            db.func.DATE(Pago.fecha_pago) <= fecha_fin_comparacion
+        )
+    else:
+        # Si por alguna razón no se calculó un rango de fechas (ej. rango_fecha inválido),
+        # no se deben cargar pagos.
+        pagos = []
+        return render_template('reportes/pagos_xfecha.html', pagos=pagos, fecha_inicio=fecha_inicio, timedelta=timedelta)
 
 
-    elif rango_fecha == "ultimo_mes":
-        fecha_inicio = fecha_fin - timedelta(days=30)
-
-    if fecha_inicio:
-        fecha_inicio_str = fecha_inicio.strftime('%Y-%m-%d')
-        fecha_fin_str = fecha_fin.strftime('%Y-%m-%d')
-        print(f"Filtrando pagos entre {fecha_inicio_str} y {fecha_fin_str}")  # Depuración
-
-        # Filtrar pagos solo dentro del rango exacto (lunes a domingo)
-        query = query.filter(db.func.DATE(Pago.fecha_pago) >= fecha_inicio_str, db.func.DATE(Pago.fecha_pago) <= fecha_fin_str)
-
-    # Filtrar por estado si se selecciona uno
-    if estado:
-        query = query.filter(Pago.estado == estado)
-
-    # Ejecutar consulta y depurar cuántos pagos se obtienen
-    pagos = query.order_by(Pago.cliente_id, PrestamoGrupal.id, Pago.fecha_pago.desc()).all()
+    # Ejecutar la consulta final
+    # Ordenar los pagos para una mejor visualización en la tabla
+    pagos = query.order_by(
+        Pago.cliente_id,
+        PrestamoGrupal.id, # Asumiendo que esta es una buena forma de ordenar dentro del grupo/cliente
+        Pago.fecha_pago.desc()
+    ).all()
     
-    print(f"Número de pagos filtrados dentro del rango: {len(pagos)}")
-    if fecha_inicio is None:
-        fecha_inicio = datetime.today()  # Si no hay rango seleccionado, usar la fecha actual
+    print(f"DEBUG: Número de pagos filtrados dentro del rango: {len(pagos)}")
 
-
+    # Renderizar la plantilla con los datos obtenidos
     return render_template('reportes/pagos_xfecha.html', pagos=pagos, fecha_inicio=fecha_inicio, timedelta=timedelta)
 
 
