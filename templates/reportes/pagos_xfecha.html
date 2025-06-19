@@ -5,8 +5,6 @@
 {% block content %}
 
 <style>
-    /* ... (tu sección <style> actual, sin cambios en CSS) ... */
-
     /* Estilos base de la tabla */
     #reporteTabla table {
         table-layout: fixed; 
@@ -86,26 +84,25 @@
             <div class="col-md-4">
                 <label for="rangoFechaSelect" class="form-label">Filtrar por Fecha</label>
                 <select class="form-select" name="rango_fecha" id="rangoFechaSelect" required>
-                    <option value="" disabled {% if not request.args.get('rango_fecha') %}selected{% endif %}>Seleccione un período</option>
-                    <option value="ultima_semana" {% if request.args.get('rango_fecha') == "ultima_semana" %}selected{% endif %}>Semana 1 (Actual)</option>
-                    <option value="semana_2" {% if request.args.get('rango_fecha') == "semana_2" %}selected{% endif %}>Semana 2</option>
-                    <option value="semana_3" {% if request.args.get('rango_fecha') == "semana_3" %}selected{% endif %}>Semana 3</option>
-                    <option value="semana_4" {% if request.args.get('rango_fecha') == "semana_4" %}selected{% endif %}>Semana 4</option>
+                    <option value="" disabled {% if not rango_fecha_seleccionado_backend %}selected{% endif %}>Seleccione un período</option> 
+                    <option value="ultima_semana" {% if rango_fecha_seleccionado_backend == "ultima_semana" %}selected{% endif %}>Semana 1 (Actual)</option>
+                    <option value="semana_2" {% if rango_fecha_seleccionado_backend == "semana_2" %}selected{% endif %}>Semana 2</option>
+                    <option value="semana_3" {% if rango_fecha_seleccionado_backend == "semana_3" %}selected{% endif %}>Semana 3</option>
+                    <option value="semana_4" {% if rango_fecha_seleccionado_backend == "semana_4" %}selected{% endif %}>Semana 4</option>
                 </select>
             </div>
         </div>
         </form>
 
-    {% if request.args.get('rango_fecha')%} 
+    {% if fecha_inicio %} 
 
     <div class="text-center mt-3 d-flex justify-content-center align-items-center mb-3">
         <button class="btn btn-primary me-2" onclick="descargarPdf()">⬇️ Descargar PDF</button>
-        
         <button class="btn btn-info" id="toggleDetallesBtn">Ocultar Detalles</button>
     </div>
 
     <div id="reporteTabla" {% if fecha_inicio %}data-start-date="{{ fecha_inicio.isoformat() }}"{% endif %}>
-        {% if pagos and fecha_inicio %}
+        {% if pagos %} {# Solo mostramos la tabla si hay un objeto de pagos (puede estar vacío) #}
         <table class="table table-bordered mt-4">
             <thead>
                 <tr>
@@ -149,7 +146,7 @@
     </div>
 
     {% else %}
-    <p class="text-center text-danger mt-4">Por favor, seleccione un período para cargar la información.</p>
+    <p class="text-center text-danger mt-4">Cargando agenda...</p> 
     {% endif %}
 </div>
 
@@ -162,7 +159,7 @@
         return urlParams.get(name);
     }
 
-    // Función para calcular el número de semana (ISO 8601).
+    // Función para calcular el número de semana (ISO 8601). (Aunque no se usa directamente en el nombre del PDF ahora)
     function getWeekNumber(d) {
         d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
         d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
@@ -199,7 +196,9 @@
             } else if (rangoFecha === 'semana_4') {
                 numeroSemanaDisplay = 'semana4';
             } else {
-                numeroSemanaDisplay = 'semana_desconocida';
+                // Fallback si por alguna razón no se obtiene el rango del URL,
+                // aunque el backend ya lo manejará por defecto.
+                numeroSemanaDisplay = 'semana_desconocida'; 
             }
 
             filename = `agenda_${startDay}al${endDay}_${numeroSemanaDisplay}.pdf`;
@@ -225,7 +224,7 @@
         });
     }
 
-    // Mi función para el botón de desplegar/ocultar detalles (sin cambios).
+    // Mi función para el botón de desplegar/ocultar detalles.
     document.addEventListener('DOMContentLoaded', function() {
         const toggleBtn = document.getElementById('toggleDetallesBtn');
         const detalles = document.querySelectorAll('.detalle-pago'); 
@@ -242,7 +241,7 @@
             }
         });
 
-        // ¡NUEVO CÓDIGO! Para la actualización automática del filtro.
+        // Código para la actualización automática del filtro.
         const rangoFechaSelect = document.getElementById('rangoFechaSelect');
         const filtroForm = document.getElementById('filtroForm');
 
