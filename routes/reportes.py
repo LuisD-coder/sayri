@@ -125,7 +125,7 @@ def pagos_xfecha():
             PrestamoGrupal.id 
         ).all()
         
-        print(f"DEBUG: Número de pagos filtrados dentro del rango: {len(pagos)}")
+        #print(f"DEBUG: Número de pagos filtrados dentro del rango: {len(pagos)}")
     else:
         # En caso de que `rango_fecha_actual` no se haya mapeado a una fecha válida
         # (aunque con el valor por defecto esto debería ser raro ahora)
