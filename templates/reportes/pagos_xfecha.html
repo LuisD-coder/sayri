@@ -60,14 +60,14 @@
 
     /* Clase optimizada para PDF. */
     .pdf-optimize {
-        font-size: 0.7em; 
+        font-size: 0.7em; /* Ya tienes esto, ayuda a reducir el tamaño del texto */
     }
     .pdf-optimize th,
     .pdf-optimize td {
-        padding: 3px; 
+        padding: 3px; /* Ya tienes esto, ayuda a reducir el espacio */
     }
     .pdf-optimize td p {
-        margin-bottom: 0.25rem; 
+        margin-bottom: 0.25rem; /* Ya tienes esto */
     }
 
     /* Regla para intentar que no rompa los bloques de detalles. */
@@ -126,7 +126,7 @@
                             {% set pagos_filtrados = pagos_list | selectattr("fecha_pago", "equalto", fecha_dia.date()) | list %}
 
                             {% if pagos_filtrados %}
-                            <strong>{{ grupo_nombre }}</strong>             
+                            <strong>➡︎ {{ grupo_nombre }}</strong>             
                             {% for pago in pagos_filtrados %}
                             <div class="detalle-pago">
                                 <p>{{ pago.cliente.nombre }} {{ pago.cliente.apellido }} <br>
@@ -204,22 +204,24 @@
             filename = `agenda_${startDay}al${endDay}_${numeroSemanaDisplay}.pdf`;
         }
         
-        element.classList.add('pdf-optimize');
+        element.classList.add('pdf-optimize'); // Aplica la clase antes de la conversión
 
         const options = {
-            margin:       5, 
+            margin:       5, // Margen en mm (5mm en cada lado)
             filename:     filename, 
             image:        { type: 'jpeg', quality: 0.98 },
             html2canvas:  { 
-                scale: 1, 
+                scale: 0.75, // Ajusta esta escala. Un valor de 0.75 o 0.8 suele funcionar bien.
+                            // Si sigue cortándose, bájalo más (ej: 0.7). Si queda mucho espacio, súbelo (ej: 0.8).
                 scrollY: 0, 
-                windowWidth: element.scrollWidth, 
-                windowHeight: element.scrollHeight 
+                // Eliminamos windowWidth y windowHeight para que html2canvas calcule mejor el tamaño.
             },
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' } // A4 apaisado
         };
 
+        // Usa html2pdf para generar y guardar el PDF
         html2pdf().set(options).from(element).save().then(function() {
+            // Remueve la clase después de que la descarga haya terminado
             element.classList.remove('pdf-optimize');
         });
     }
