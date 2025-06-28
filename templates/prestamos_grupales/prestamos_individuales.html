@@ -12,9 +12,9 @@
                 <thead class="table-primary text-dark">
                     <tr>
                         <th>Cliente</th>
-                        <th>Monto</th>
-                        <th>Fecha de Desembolso</th>
-                        <th>Estado</th>
+                        <th>Monto del Prestamo</th>
+                        <th>DNI</th>
+                        <th>Cuota a Pagar</th> {# Etiqueta mas clara #}
                         <th>Contrato</th>
                     </tr>
                 </thead>
@@ -23,8 +23,16 @@
                         <tr>
                             <td>{{ prestamo.cliente.nombre }} {{ prestamo.cliente.apellido }}</td>
                             <td>S/ {{ prestamo.monto }}</td>
-                            <td>{{ prestamo.fecha_desembolso }}</td>
-                            <td>{{ prestamo.estado }}</td>
+                            <td>{{ prestamo.cliente.dni }}</td>
+                            <td>
+                                {# Usamos el metodo obtener_numero_cuota() directamente del objeto prestamo #}
+                                {% set cuota = prestamo.obtener_numero_cuota() %}
+                                {% if cuota is not none %}
+                                    S/ {{ cuota }}
+                                {% else %}
+                                    N/A {# O puedes mostrar un mensaje diferente si el monto no tiene una cuota definida #}
+                                {% endif %}
+                            </td>
                             <td>
                                 {% set contrato = prestamo.cliente.contratos | selectattr('prestamo_individual_id', 'equalto', prestamo.id) | first %}
                                 {% if contrato %}
@@ -39,7 +47,7 @@
             </table>
         </div>
     {% else %}
-        <p class="text-center">No hay préstamos individuales para este grupo.</p>
+        <p class="text-center">No hay prestamos individuales para este grupo.</p>
     {% endif %}
 </div>
 {% endblock %}
