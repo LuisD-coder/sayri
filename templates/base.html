@@ -27,7 +27,7 @@
             </button>
             <div class="collapse navbar-collapse justify-content-end mt-2 mt-lg-0" id="navbarNav">
                 <ul class="navbar-nav">
-                    {% if current_user.is_authenticated and current_user.rol.nombre == 'admin' %}
+                    {% if current_user.is_authenticated and (current_user.rol.nombre == 'admin' or current_user.rol.nombre == 'manager') %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle text-light" href="#" id="reportesDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="bi bi-file-earmark-text"></i> Agenda
