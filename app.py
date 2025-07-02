@@ -18,12 +18,12 @@ def create_app():
     # Lo ideal es que esto venga de config.py o de una variable de entorno
     # Por ahora, lo definimos aquí para el ejemplo.
     # CAMBIA ESTO A TRUE CUANDO QUIERAS ACTIVAR EL MANTENIMIENTO
-    app.config['MAINTENANCE_MODE'] = False
+    app.config['MAINTENANCE_MODE'] = True
 
     # Opcional: Lista de IPs permitidas para acceder durante el mantenimiento
     # Reemplaza 'TU_DIRECCION_IP_PUBLICA' con tu IP real.
     # Puedes añadir más IPs si es necesario: ['IP_ADMIN1', 'IP_ADMIN2']
-    ALLOWED_IPS_DURING_MAINTENANCE = ['192.168.1.5']
+    ALLOWED_IPS_DURING_MAINTENANCE = ['201.218.159.117']
 
 
     # --- Lógica del before_request para el modo mantenimiento ---
