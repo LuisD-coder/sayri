@@ -7,6 +7,7 @@ from models.cliente import Cliente  # Asegúrate de que Cliente esté importado
 from models.grupo import Grupo
 from models.prestamo_grupal import PrestamoGrupal
 from models.prestamo_individual import PrestamoIndividual # Asegúrate de que PrestamoIndividual esté importado
+from sqlalchemy.orm import aliased
 
 reportes_bp = Blueprint('reportes', __name__, url_prefix='/reportes')
 
@@ -69,74 +70,65 @@ def pagos_realizados():
 @login_required 
 def pagos_xfecha():
     rango_fecha_param = request.args.get('rango_fecha')
-
-    # Determinar el rango de fecha seleccionado o establecer "ultima_semana" por defecto
-    # Si no se envía rango_fecha, o si el valor es vacío/inválido, se usa "ultima_semana"
-    if not rango_fecha_param or rango_fecha_param not in ["ultima_semana", "semana_2", "semana_3", "semana_4"]:
-        rango_fecha_actual = "ultima_semana" # Valor por defecto
-    else:
-        rango_fecha_actual = rango_fecha_param
+    rango_fecha_actual = rango_fecha_param if rango_fecha_param in ["ultima_semana", "semana_2", "semana_3", "semana_4"] else "ultima_semana"
 
     pagos = [] 
-    fecha_inicio = None
-    fecha_fin = None
-
+    fecha_inicio = fecha_fin = None
     fecha_hoy = datetime.today()
-    dia_semana_hoy = fecha_hoy.weekday() 
-    
-    # Calcula el Lunes de la semana actual (hora 00:00:00)
-    # Se usa .date() para obtener solo la parte de la fecha y luego se convierte a datetime
-    fecha_lunes_semana_actual = datetime.combine(fecha_hoy - timedelta(days=dia_semana_hoy), datetime.min.time())
+    fecha_lunes_actual = datetime.combine(fecha_hoy - timedelta(days=fecha_hoy.weekday()), datetime.min.time())
 
-    # Lógica para calcular fecha_inicio y fecha_fin basada en rango_fecha_actual
-    if rango_fecha_actual == "ultima_semana":
-        fecha_inicio = fecha_lunes_semana_actual
-        fecha_fin = fecha_inicio + timedelta(days=6)
-    elif rango_fecha_actual == "semana_2":
-        fecha_inicio = fecha_lunes_semana_actual + timedelta(weeks=1)
-        fecha_fin = fecha_inicio + timedelta(days=6)
-    elif rango_fecha_actual == "semana_3":
-        fecha_inicio = fecha_lunes_semana_actual + timedelta(weeks=2)
-        fecha_fin = fecha_inicio + timedelta(days=6)
-    elif rango_fecha_actual == "semana_4":
-        fecha_inicio = fecha_lunes_semana_actual + timedelta(weeks=3)
-        fecha_fin = fecha_inicio + timedelta(days=6)
-    
-    # Realizar la consulta si se pudo determinar un rango de fechas válido
-    if fecha_inicio and fecha_fin:
-        # Extraer solo la parte de la fecha para la comparación con la DB
-        fecha_inicio_comparacion = fecha_inicio.date()
-        fecha_fin_comparacion = fecha_fin.date()
+    semanas_offset = {
+        "ultima_semana": 0,
+        "semana_2": 1,
+        "semana_3": 2,
+        "semana_4": 3
+    }
+    fecha_inicio = fecha_lunes_actual + timedelta(weeks=semanas_offset[rango_fecha_actual])
+    fecha_fin = fecha_inicio + timedelta(days=6)
 
-        print(f"DEBUG: Filtrando pagos entre {fecha_inicio_comparacion.strftime('%d-%m-%Y')} y {fecha_fin_comparacion.strftime('%d-%m-%Y')} para {rango_fecha_actual}")
+    fecha_inicio_comparacion = fecha_inicio.date()
+    fecha_fin_comparacion = fecha_fin.date()
 
-        # La consulta debe unirse a Cliente, PrestamoIndividual y PrestamoGrupal
-        query = Pago.query \
-                    .join(Pago.cliente) \
-                    .join(Pago.prestamo_individual) \
-                    .join(PrestamoIndividual.prestamo_grupal) \
-                    .filter(
-                        db.func.DATE(Pago.fecha_pago) >= fecha_inicio_comparacion,
-                        db.func.DATE(Pago.fecha_pago) <= fecha_fin_comparacion
-                    )
-        pagos = query.order_by(
-            Cliente.nombre, # Ahora podemos ordenar por Cliente.nombre
-            Pago.fecha_pago,
-            PrestamoGrupal.id 
-        ).all()
-        
-        #print(f"DEBUG: Número de pagos filtrados dentro del rango: {len(pagos)}")
-    else:
-        # En caso de que `rango_fecha_actual` no se haya mapeado a una fecha válida
-        # (aunque con el valor por defecto esto debería ser raro ahora)
-        print(f"DEBUG: No se pudo determinar el rango de fechas válido para el filtro: {rango_fecha_actual}. Mostrando agenda vacía.")
+    # Subconsulta para obtener el ID del prestamo_grupal más reciente por grupo
+    subq = db.session.query(
+        PrestamoGrupal.grupo_id,
+        db.func.max(PrestamoGrupal.fecha_desembolso).label('fecha_max')
+    ).group_by(PrestamoGrupal.grupo_id).subquery()
 
-    # Renderizar la plantilla
+    pg_alias = aliased(PrestamoGrupal)
+
+    prestamos_grupales_ids = db.session.query(pg_alias.id).join(
+        subq,
+        (pg_alias.grupo_id == subq.c.grupo_id) &
+        (pg_alias.fecha_desembolso == subq.c.fecha_max)
+    ).all()
+
+    ids_filtrados = [x[0] for x in prestamos_grupales_ids]
+
+
+    # Consulta final usando PrestamoIndividual.prestamo_grupal_id
+    query = Pago.query \
+        .join(Pago.prestamo_individual) \
+        .join(Pago.cliente) \
+        .filter(
+            PrestamoIndividual.prestamo_grupal_id.in_(ids_filtrados),
+            db.func.DATE(Pago.fecha_pago) >= fecha_inicio_comparacion,
+            db.func.DATE(Pago.fecha_pago) <= fecha_fin_comparacion
+        ) \
+        .order_by(
+            Cliente.nombre,
+            Pago.fecha_pago
+        )
+
+    pagos = query.all()
+
     return render_template('reportes/pagos_xfecha.html', 
                            pagos=pagos, 
                            fecha_inicio=fecha_inicio, 
                            timedelta=timedelta,
-                           rango_fecha_seleccionado_backend=rango_fecha_actual) # Pasamos el valor final para el `selected` del HTML
+                           rango_fecha_seleccionado_backend=rango_fecha_actual)
+                           
+                           
 
 
 @reportes_bp.route('/pagos_proximos')
