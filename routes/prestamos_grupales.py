@@ -9,8 +9,9 @@ from flask_login import login_required
 import os
 from io import BytesIO
 import io
-from flask import send_file, Response # Asegurate que Response este importado
+from flask import send_file, Response, current_app # Asegurate que Response este importado
 from sqlalchemy import asc, desc
+from unidecode import unidecode
 
 
 
@@ -192,36 +193,38 @@ def prestamos_por_grupo(grupo_id):
 
 
 # ==============================================================================
-# FUNCION PARA DESCARGAR CONTRATO INDIVIDUAL (CORREGIDA PARA FILENO Y UNICODE)
+# FUNCION PARA DESCARGAR CONTRATO INDIVIDUAL (CORREGIDA)
 # ==============================================================================
 @prestamos_grupales_bp.route('/descargar_contrato/<int:contrato_id>')
 @login_required
 def descargar_contrato(contrato_id):
-    print(f"DEBUG: [descargar_contrato] Intentando descargar contrato ID: {contrato_id}")
+    current_app.logger.debug(f"DEBUG: [descargar_contrato] Intentando descargar contrato ID: {contrato_id}")
     contrato = Contrato.query.get_or_404(contrato_id)
-    print(f"DEBUG: [descargar_contrato] Contrato encontrado: {contrato.nombre_archivo}")
-    
-    try:
-        # Crear un buffer en memoria desde el contenido binario
-        # No crear un BytesIO si se va a leer con .getvalue() inmediatamente para Response
-        pdf_bytes = contrato.archivo # Los bytes ya estan aqui
-        
-        print(f"DEBUG: [descargar_contrato] Bytes del PDF obtenidos de la BD. Tamano: {len(pdf_bytes)} bytes.")
+    current_app.logger.debug(f"DEBUG: [descargar_contrato] Contrato encontrado: {contrato.nombre_archivo}")
 
-        # Enviar el archivo como respuesta usando Response directamente
+    try:
+        # LÍNEA CORREGIDA: Usar la nueva columna
+        pdf_bytes = contrato.datos_binarios
+        current_app.logger.debug(f"DEBUG: [descargar_contrato] Bytes del PDF obtenidos de la BD. Tamano: {len(pdf_bytes)} bytes.")
+
+        # --- CAMBIO CLAVE: Normalizar el nombre del archivo para la descarga ---
+        # Si el nombre en la DB contiene caracteres como 'ñ', unidecode los convierte (ej. 'ñ' a 'n').
+        # secure_filename asegura que sea seguro para nombres de archivo.
+        download_filename = secure_filename(unidecode(contrato.nombre_archivo))
+
         headers = {
             'Content-Type': 'application/pdf',
-            'Content-Disposition': f'attachment; filename="{contrato.nombre_archivo}"',
-            'Content-Length': str(len(pdf_bytes)) # Importante para Response
+            'Content-Disposition': f'attachment; filename="{download_filename}"',
+            'Content-Length': str(len(pdf_bytes))
         }
-        print(f"DEBUG: [descargar_contrato] Enviando PDF con Response. Nombre: {contrato.nombre_archivo}")
+        current_app.logger.debug(f"DEBUG: [descargar_contrato] Enviando PDF con Response. Nombre: {download_filename}")
         return Response(pdf_bytes, headers=headers)
-        
+
     except Exception as e:
-        print(f"ERROR: [descargar_contrato] Excepcion al intentar enviar el archivo: {e}")
+        # --- MEJORA EN EL LOG: Usar current_app.logger y exc_info=True ---
+        current_app.logger.error(f"ERROR: [descargar_contrato] Excepcion al intentar enviar el archivo: {e}", exc_info=True)
         flash(f"Error al descargar el contrato: {str(e)}", "error")
-        # En caso de error, redirige o renderiza una pagina de error
-        return redirect(url_for('prestamos_grupales.lista_prestamos_grupales')) # Cambia esto a una pagina de error si tienes una
+        return redirect(url_for('prestamos_grupales.lista_prestamos_grupales'))
 
 
 # ==============================================================================
@@ -230,138 +233,147 @@ def descargar_contrato(contrato_id):
 @prestamos_grupales_bp.route('/generar_contrato/<int:prestamo_grupal_id>', methods=['GET'])
 @login_required
 def generar_contrato(prestamo_grupal_id):
-    print(f"DEBUG: [generar_contrato] Iniciando generacion de ZIP para prestamo_grupal_id={prestamo_grupal_id}")
-    
+    current_app.logger.debug(f"DEBUG: [generar_contrato] Iniciando generacion de ZIP para prestamo_grupal_id={prestamo_grupal_id}")
+
     prestamo_grupal = PrestamoGrupal.query.get_or_404(prestamo_grupal_id)
     clientes_asociados = PrestamoIndividual.query.filter_by(prestamo_grupal_id=prestamo_grupal.id).all()
 
     if not clientes_asociados:
         flash('No se encontraron clientes asociados a este prestamo grupal.', 'error')
-        print(f"DEBUG: [generar_contrato] No se encontraron clientes asociados.")
+        current_app.logger.debug(f"DEBUG: [generar_contrato] No se encontraron clientes asociados.")
         return redirect(url_for('prestamos_grupales.lista_prestamos_grupales'))
 
     temp_zip_path = None
     try:
-        # 1. Crear un archivo ZIP temporal en disco
         with tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix=".zip") as temp_zip_file:
-            temp_zip_path = temp_zip_file.name # Guardar la ruta para la limpieza final
+            temp_zip_path = temp_zip_file.name
 
-        print(f"DEBUG: [generar_contrato] Archivo ZIP temporal creado en: {temp_zip_path}")
+        current_app.logger.debug(f"DEBUG: [generar_contrato] Archivo ZIP temporal creado en: {temp_zip_path}")
 
-        # 2. Escribir los contenidos en el archivo ZIP temporal
         with zipfile.ZipFile(temp_zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
             for prestamo_individual in clientes_asociados:
                 cliente = Cliente.query.get(prestamo_individual.cliente_id)
                 if not cliente:
                     flash(f'Error: Cliente con ID {prestamo_individual.cliente_id} no encontrado.', 'error')
-                    print(f"ERROR: [generar_contrato] Cliente con ID {prestamo_individual.cliente_id} no encontrado.")
+                    current_app.logger.error(f"ERROR: [generar_contrato] Cliente con ID {prestamo_individual.cliente_id} no encontrado.")
                     continue
 
-                print(f"DEBUG: [generar_contrato] Procesando contrato para cliente: {cliente.nombre} {cliente.apellido}")
-                
+                current_app.logger.debug(f"DEBUG: [generar_contrato] Procesando contrato para cliente: {cliente.nombre} {cliente.apellido}")
+
                 try:
-                    # generar_contrato_logic ahora debe devolver el BytesIO directamente
-                    pdf_buffer = generar_contrato_logic(cliente.id, prestamo_grupal, return_type='buffer') 
+                    pdf_buffer = generar_contrato_logic(cliente.id, prestamo_grupal, return_type='buffer')
                 except Exception as e:
                     flash(f'Error al generar contrato para {cliente.nombre} {cliente.apellido}: {str(e)}', 'error')
-                    print(f"ERROR: [generar_contrato] Excepcion al llamar a generar_contrato_logic para {cliente.nombre}: {str(e)}")
+                    # --- MEJORA EN EL LOG: Usar current_app.logger y exc_info=True ---
+                    current_app.logger.error(f"ERROR: [generar_contrato] Excepcion al llamar a generar_contrato_logic para {cliente.nombre}: {str(e)}", exc_info=True)
                     continue
 
                 if isinstance(pdf_buffer, io.BytesIO):
                     pdf_bytes = pdf_buffer.getvalue()
-                    pdf_buffer.close() 
-                    print(f"DEBUG: [generar_contrato] PDF de {cliente.nombre} obtenido del buffer (tamano: {len(pdf_bytes)} bytes).")
+                    pdf_buffer.close()
+                    current_app.logger.debug(f"DEBUG: [generar_contrato] PDF de {cliente.nombre} obtenido del buffer (tamano: {len(pdf_bytes)} bytes).")
                 else:
                     flash(f'Error: La funcion generar_contrato_logic no devolvio un objeto BytesIO valido para {cliente.nombre} {cliente.apellido}. Tipo recibido: {type(pdf_buffer)}', 'error')
-                    print(f"ERROR: [generar_contrato] generar_contrato_logic no devolvio BytesIO para {cliente.nombre} {cliente.apellido}. Tipo recibido: {type(pdf_buffer)}")
+                    current_app.logger.error(f"ERROR: [generar_contrato] generar_contrato_logic no devolvio BytesIO para {cliente.nombre} {cliente.apellido}. Tipo recibido: {type(pdf_buffer)}")
                     continue
 
                 monto_cliente = prestamo_individual.monto
-                nombre_archivo = secure_filename(f"Contrato_{cliente.nombre}_{cliente.apellido}_Monto_{monto_cliente}.pdf")
-                print(f"DEBUG: [generar_contrato] Anadiendo '{nombre_archivo}' al ZIP.")
-                zipf.writestr(nombre_archivo, pdf_bytes)
 
-        print(f"DEBUG: [generar_contrato] Todos los contratos anadidos al ZIP. Tamano final del ZIP en disco: {os.path.getsize(temp_zip_path)} bytes.")
+                # --- CAMBIO CLAVE: Normalizar los nombres de cliente para el nombre de archivo dentro del ZIP ---
+                # unidecode convierte 'ñ' a 'n', 'á' a 'a', etc.
+                # .replace() elimina espacios y puntos que secure_filename podría convertir de forma indeseada
+                cliente_nombre_limpio = unidecode(cliente.nombre).replace(" ", "_").replace(".", "")
+                cliente_apellido_limpio = unidecode(cliente.apellido).replace(" ", "_").replace(".", "")
 
-        grupo_nombre = prestamo_grupal.grupo.nombre
+                # Construye el nombre del archivo con los nombres limpios y luego secure_filename
+                nombre_archivo_base_zip = f"Contrato_{cliente_nombre_limpio.upper()}_{cliente_apellido_limpio.upper()}_Monto_{monto_cliente}.pdf"
+                nombre_archivo_zip = secure_filename(nombre_archivo_base_zip)
+
+                current_app.logger.debug(f"DEBUG: [generar_contrato] Anadiendo '{nombre_archivo_zip}' al ZIP.")
+                zipf.writestr(nombre_archivo_zip, pdf_bytes) # Aquí se pasaba el nombre con 'ñ'
+
+        current_app.logger.debug(f"DEBUG: [generar_contrato] Todos los contratos anadidos al ZIP. Tamano final del ZIP en disco: {os.path.getsize(temp_zip_path)} bytes.")
+
+        # --- CAMBIO CLAVE: Normalizar el nombre del grupo para el nombre del archivo ZIP final ---
+        grupo_nombre_limpio = unidecode(prestamo_grupal.grupo.nombre).replace(" ", "_").replace(".", "")
         fecha_desembolso = prestamo_grupal.fecha_desembolso.strftime('%d-%m-%Y')
-        download_name = f"Contratos_{grupo_nombre}_Desembolso_{fecha_desembolso}.zip"
+        download_name_base = f"Contratos_{grupo_nombre_limpio}_Desembolso_{fecha_desembolso}.zip"
+        download_name = secure_filename(download_name_base) # secure_filename también es importante aquí
 
-        print(f"DEBUG: [generar_contrato] Leyendo el archivo ZIP temporal para enviarlo con Response.")
+        current_app.logger.debug(f"DEBUG: [generar_contrato] Leyendo el archivo ZIP temporal para enviarlo con Response.")
         with open(temp_zip_path, 'rb') as f:
             zip_data = f.read()
-        
+
         headers = {
             'Content-Type': 'application/zip',
             'Content-Disposition': f'attachment; filename="{download_name}"',
             'Content-Length': str(len(zip_data))
         }
-        print(f"DEBUG: [generar_contrato] Enviando ZIP con Response. Nombre: {download_name}, Tamano: {len(zip_data)}")
+        current_app.logger.debug(f"DEBUG: [generar_contrato] Enviando ZIP con Response. Nombre: {download_name}, Tamano: {len(zip_data)}")
         return Response(zip_data, headers=headers)
 
     except Exception as e:
         flash(f"Error al generar o descargar el archivo ZIP: {str(e)}", "error")
-        print(f"CRITICAL ERROR: [generar_contrato] Excepcion general durante la generacion del ZIP: {str(e)}")
+        # --- MEJORA EN EL LOG: Usar current_app.logger y exc_info=True ---
+        current_app.logger.critical(f"CRITICAL ERROR: [generar_contrato] Excepcion general durante la generacion del ZIP: {str(e)}", exc_info=True)
         return redirect(url_for('prestamos_grupales.lista_prestamos_grupales'))
     finally:
         if temp_zip_path and os.path.exists(temp_zip_path):
             try:
                 os.remove(temp_zip_path)
-                print(f"DEBUG: [generar_contrato] Archivo temporal ZIP eliminado: {temp_zip_path}")
+                current_app.logger.debug(f"DEBUG: [generar_contrato] Archivo temporal ZIP eliminado: {temp_zip_path}")
             except Exception as e:
-                print(f"ERROR: [generar_contrato] No se pudo eliminar el archivo temporal ZIP {temp_zip_path}: {e}")
+                current_app.logger.error(f"ERROR: [generar_contrato] No se pudo eliminar el archivo temporal ZIP {temp_zip_path}: {e}")
 
 
 # ==============================================================================
-# FUNCION LOGICA PARA GENERAR UN CONTRATO INDIVIDUAL (AJUSTADA PARA RETORNO)
+# FUNCION LOGICA PARA GENERAR UN CONTRATO INDIVIDUAL (AJUSTADA Y CORREGIDA)
 # ==============================================================================
-def generar_contrato_logic(cliente_id, prestamo_grupal, return_type='response'): # Nuevo parametro return_type
-    print(f"DEBUG: [generar_contrato_logic] Iniciando para cliente_id={cliente_id}, prestamo_grupal_id={prestamo_grupal.id}")
+def generar_contrato_logic(cliente_id, prestamo_grupal, return_type='response'):
+    current_app.logger.debug(f"DEBUG: [generar_contrato_logic] Iniciando para cliente_id={cliente_id}, prestamo_grupal_id={prestamo_grupal.id}")
 
-    # Obtener el cliente por su ID
     cliente = Cliente.query.get_or_404(cliente_id)
-    print(f"DEBUG: [generar_contrato_logic] Cliente encontrado: {cliente.nombre} {cliente.apellido} (DNI: {cliente.dni})")
+    current_app.logger.debug(f"DEBUG: [generar_contrato_logic] Cliente encontrado: {cliente.nombre} {cliente.apellido} (DNI: {cliente.dni})")
 
-    # Obtener el prestamo individual correcto dentro del prestamo grupal
     prestamo_individual = PrestamoIndividual.query.filter_by(cliente_id=cliente.id, prestamo_grupal_id=prestamo_grupal.id).first()
-    
+
     if prestamo_individual is None:
-        print(f"ERROR: [generar_contrato_logic] No se encontro el prestamo individual para cliente {cliente.id} y prestamo grupal {prestamo_grupal.id}.")
+        current_app.logger.error(f"ERROR: [generar_contrato_logic] No se encontro el prestamo individual para cliente {cliente.id} y prestamo grupal {prestamo_grupal.id}.")
         raise ValueError(f"No se encontro el prestamo para el cliente {cliente.nombre} {cliente.apellido} en este prestamo grupal.")
-    
-    print(f"DEBUG: [generar_contrato_logic] Prestamo individual encontrado: ID={prestamo_individual.id}, Monto={prestamo_individual.monto}")
+
+    current_app.logger.debug(f"DEBUG: [generar_contrato_logic] Prestamo individual encontrado: ID={prestamo_individual.id}, Monto={prestamo_individual.monto}")
 
     monto_cliente = round(prestamo_individual.monto)
-    print(f"DEBUG: [generar_contrato_logic] Monto del cliente redondeado: {monto_cliente}")
+    current_app.logger.debug(f"DEBUG: [generar_contrato_logic] Monto del cliente redondeado: {monto_cliente}")
 
-    contrato_path = f"static/contrato_preformateado{monto_cliente}.pdf"
-    print(f"DEBUG: [generar_contrato_logic] Ruta del contrato preformateado: {contrato_path}")
+    contrato_path = os.path.join(current_app.root_path, "static", f"contrato_preformateado{monto_cliente}.pdf")
+    current_app.logger.debug(f"DEBUG: [generar_contrato_logic] Ruta del contrato preformateado: {contrato_path}")
 
     if not os.path.exists(contrato_path):
-        print(f"ERROR: [generar_contrato_logic] Archivo no encontrado: {contrato_path}")
+        current_app.logger.error(f"ERROR: [generar_contrato_logic] Archivo no encontrado: {contrato_path}")
         raise FileNotFoundError(f"No se encontro el archivo de contrato preformateado para el monto {monto_cliente}.")
-    print(f"DEBUG: [generar_contrato_logic] Archivo preformateado encontrado.")
+    current_app.logger.debug(f"DEBUG: [generar_contrato_logic] Archivo preformateado encontrado.")
 
     try:
         doc = fitz.open(contrato_path)
-        print(f"DEBUG: [generar_contrato_logic] Documento PDF abierto con exito.")
+        current_app.logger.debug(f"DEBUG: [generar_contrato_logic] Documento PDF abierto con exito.")
     except Exception as e:
-        print(f"ERROR: [generar_contrato_logic] Error al abrir el archivo PDF con fitz: {e}")
+        # --- MEJORA EN EL LOG: Usar current_app.logger y exc_info=True ---
+        current_app.logger.error(f"ERROR: [generar_contrato_logic] Error al abrir el archivo PDF con fitz: {e}", exc_info=True)
         raise ValueError(f"Error al abrir el archivo PDF: {e}")
 
-    # Obtener las fechas de pago solo del prestamo individual correcto
     pagos = Pago.query.filter_by(cliente_id=cliente.id, prestamo_individual_id=prestamo_individual.id) \
-                      .order_by(Pago.fecha_pago).limit(4).all()
-    print(f"DEBUG: [generar_contrato_logic] Pagos obtenidos del cliente {cliente.id}: {len(pagos)}")
+                         .order_by(Pago.fecha_pago).limit(4).all()
+    current_app.logger.debug(f"DEBUG: [generar_contrato_logic] Pagos obtenidos del cliente {cliente.id}: {len(pagos)}")
     fechas_pago = [pago.fecha_pago.strftime('%d/%m/%Y') for pago in pagos]
-    print(f"DEBUG: [generar_contrato_logic] Fechas de pago iniciales: {fechas_pago}")
+    current_app.logger.debug(f"DEBUG: [generar_contrato_logic] Fechas de pago iniciales: {fechas_pago}")
 
-    # Asegurar que haya 4 fechas, rellenando con "N/A" si es necesario
     while len(fechas_pago) < 4:
         fechas_pago.append("N/A")
-    print(f"DEBUG: [generar_contrato_logic] Fechas de pago finalizadas (4): {fechas_pago}")
+    current_app.logger.debug(f"DEBUG: [generar_contrato_logic] Fechas de pago finalizadas (4): {fechas_pago}")
 
-    # Definir los datos a reemplazar
+    # Los datos para reemplazar DENTRO del PDF (NOMBRE_APELLIDO, etc.)
+    # SÍ pueden contener 'ñ' y acentos, ya que PyMuPDF maneja Unicode internamente en el contenido.
     datos_cliente = {
         "NOMBRE_APELLIDO": f"{cliente.nombre.upper()} {cliente.apellido.upper()}",
         "DNI": cliente.dni,
@@ -372,95 +384,95 @@ def generar_contrato_logic(cliente_id, prestamo_grupal, return_type='response'):
         "FECHA_3": fechas_pago[2],
         "FECHA_4": fechas_pago[3]
     }
-    print(f"DEBUG: [generar_contrato_logic] Datos a reemplazar en PDF: {datos_cliente}")
+    current_app.logger.debug(f"DEBUG: [generar_contrato_logic] Datos a reemplazar en PDF: {datos_cliente}")
 
-
-    # Reemplazo en el documento PDF
     for page_num, page in enumerate(doc):
-        print(f"DEBUG: [generar_contrato_logic] Procesando pagina {page_num + 1}...")
+        current_app.logger.debug(f"DEBUG: [generar_contrato_logic] Procesando pagina {page_num + 1}...")
         text_instances = []
         for tag, value in datos_cliente.items():
             placeholder = f"{{{{{tag}}}}}"
             for inst in page.search_for(placeholder):
                 text_instances.append((inst, value))
-        
-        print(f"DEBUG: [generar_contrato_logic] Instancias de texto encontradas para reemplazar: {len(text_instances)}")
+
+        current_app.logger.debug(f"DEBUG: [generar_contrato_logic] Instancias de texto encontradas para reemplazar: {len(text_instances)}")
 
         for rect, value in text_instances:
             x0, y0, x1, y1 = rect.x0, rect.y0, rect.x1, rect.y1
-            # El tag ya no esta disponible aqui, usa un valor generico o remueve el print para esta linea
-            # print(f"DEBUG: [generar_contrato_logic] Reemplazando '{datos_cliente.get(tag, 'N/A')}' con '{value}' en rect {rect}")
-            print(f"DEBUG: [generar_contrato_logic] Reemplazando con '{value}' en rect {rect}")
+            current_app.logger.debug(f"DEBUG: [generar_contrato_logic] Reemplazando con '{value}' en rect {rect}")
 
-
-            # Dibujar un rectangulo blanco para cubrir la etiqueta
-            rect = fitz.Rect(x0, y0, x1, y1)
+            rect_fill = fitz.Rect(x0, y0, x1, y1)
             page.draw_rect(
-                rect,
-                color=(1, 1, 1),  # Color blanco (borde opcional)
-                fill=(1, 1, 1),   # Color blanco (relleno)
-                width=0           # Sin bordes visibles
+                rect_fill,
+                color=(1, 1, 1),
+                fill=(1, 1, 1),
+                width=0
             )
 
-            # Escribir el nuevo texto en la misma posicion
             page.insert_text(
-                (rect.x0, rect.y0 + rect.height * 0.8), # Ajuste para que el texto quede bien centrado verticalmente
+                (rect.x0, rect.y0 + rect.height * 0.8),
                 value,
                 fontsize=9,
                 color=(0, 0, 0)
             )
-    print(f"DEBUG: [generar_contrato_logic] Reemplazo de texto en PDF completado.")
+    current_app.logger.debug(f"DEBUG: [generar_contrato_logic] Reemplazo de texto en PDF completado.")
 
-    # Guardar el contrato en memoria
     buffer = io.BytesIO()
     doc.save(buffer)
-    print(f"DEBUG: [generar_contrato_logic] PDF guardado en buffer en memoria. Tamano: {len(buffer.getvalue())} bytes.")
-    buffer.seek(0) # Mover el puntero al inicio para que el lector lo lea desde el principio
-    print(f"DEBUG: [generar_contrato_logic] Puntero del buffer reseteado a 0.")
-    doc.close() # Liberar recursos del documento PDF (PyMuPDF)
-    print(f"DEBUG: [generar_contrato_logic] Documento PyMuPDF cerrado.")
+    current_app.logger.debug(f"DEBUG: [generar_contrato_logic] PDF guardado en buffer en memoria. Tamano: {len(buffer.getvalue())} bytes.")
+    buffer.seek(0)
+    current_app.logger.debug(f"DEBUG: [generar_contrato_logic] Puntero del buffer reseteado a 0.")
+    doc.close()
+    current_app.logger.debug(f"DEBUG: [generar_contrato_logic] Documento PyMuPDF cerrado.")
 
-    nombre_archivo = f"contrato_{cliente.nombre.upper()}_{cliente.apellido.upper()}_{monto_cliente}.pdf"
-    print(f"DEBUG: [generar_contrato_logic] Nombre de archivo para descarga: {nombre_archivo}")
+    # --- CAMBIO CLAVE: Normalizar el nombre de archivo para la DB y descarga individual ---
+    # Esto asegura que el nombre guardado en la BD no cause problemas en el futuro y sea compatible.
+    cliente_nombre_limpio = unidecode(cliente.nombre).replace(" ", "_").replace(".", "")
+    cliente_apellido_limpio = unidecode(cliente.apellido).replace(" ", "_").replace(".", "")
 
-    # Buscar si ya existe un contrato para el cliente y su prestamo individual
+    # Construye el nombre del archivo con los nombres limpios y luego secure_filename
+    nombre_archivo_base = f"contrato_{cliente_nombre_limpio.upper()}_{cliente_apellido_limpio.upper()}_Monto_{monto_cliente}.pdf"
+    nombre_archivo = secure_filename(nombre_archivo_base)
+
+    current_app.logger.debug(f"DEBUG: [generar_contrato_logic] Nombre de archivo para descarga (limpio): {nombre_archivo}")
+
     contrato_existente = Contrato.query.filter_by(cliente_id=cliente.id, prestamo_individual_id=prestamo_individual.id).first()
-    
-    pdf_bytes_para_db = buffer.getvalue() # Obtener los bytes para guardar en la DB
-    print(f"DEBUG: [generar_contrato_logic] Bytes del PDF listos para DB. (Tamano: {len(pdf_bytes_para_db)})")
+
+    pdf_bytes_para_db = buffer.getvalue()
+    current_app.logger.debug(f"DEBUG: [generar_contrato_logic] Bytes del PDF listos para DB. (Tamano: {len(pdf_bytes_para_db)})")
 
     if contrato_existente:
-        print(f"DEBUG: [generar_contrato_logic] Contrato existente encontrado. Actualizando...")
-        # Actualizar el contrato existente con el nuevo archivo PDF
-        contrato_existente.archivo = pdf_bytes_para_db
+        current_app.logger.debug(f"DEBUG: [generar_contrato_logic] Contrato existente encontrado. Actualizando...")
+        # LÍNEA CORREGIDA: Usar la nueva columna
+        contrato_existente.datos_binarios = pdf_bytes_para_db
         contrato_existente.nombre_archivo = nombre_archivo
     else:
-        print(f"DEBUG: [generar_contrato_logic] No se encontro contrato existente. Creando nuevo...")
-        # Crear un nuevo contrato si no existe uno previo
+        current_app.logger.debug(f"DEBUG: [generar_contrato_logic] No se encontro contrato existente. Creando nuevo...")
         nuevo_contrato = Contrato(
             nombre_archivo=nombre_archivo,
-            archivo=pdf_bytes_para_db,
+            # LÍNEA CORREGIDA: Usar la nueva columna
+            datos_binarios=pdf_bytes_para_db,
             cliente_id=cliente.id,
             prestamo_individual_id=prestamo_individual.id
         )
         db.session.add(nuevo_contrato)
 
-    # Guardar cambios en la base de datos
-    db.session.commit()
-    print(f"DEBUG: [generar_contrato_logic] Cambios en la base de datos (contrato) guardados.")
-    
-    # ----------------------------------------------------------------------------------
-    # CAMBIO CLAVE: Devolver BytesIO si es para ZIP, o Response si es para descarga directa
-    # ----------------------------------------------------------------------------------
+    try:
+        db.session.commit()
+        current_app.logger.debug(f"DEBUG: [generar_contrato_logic] Cambios en la base de datos (contrato) guardados.")
+    except Exception as e:
+        db.session.rollback()
+        # --- MEJORA EN EL LOG: Usar current_app.logger y exc_info=True ---
+        current_app.logger.error(f"ERROR: [generar_contrato_logic] Error al guardar el contrato en la base de datos para cliente {cliente_id}: {e}", exc_info=True)
+        raise # Relanza la excepción para que el llamador (generar_contrato) pueda manejarla
+
     if return_type == 'buffer':
-        print(f"DEBUG: [generar_contrato_logic] Devolviendo BytesIO (buffer) para uso interno.")
+        current_app.logger.debug(f"DEBUG: [generar_contrato_logic] Devolviendo BytesIO (buffer) para uso interno.")
         return buffer
-    else: # Por defecto o si se solicita 'response'
-        print(f"DEBUG: [generar_contrato_logic] Preparando Response para descarga directa.")
+    else:
+        current_app.logger.debug(f"DEBUG: [generar_contrato_logic] Preparando Response para descarga directa.")
         headers = {
             'Content-Type': 'application/pdf',
             'Content-Disposition': f'attachment; filename="{nombre_archivo}"',
             'Content-Length': str(len(pdf_bytes_para_db))
         }
         return Response(pdf_bytes_para_db, headers=headers)
-    # ----------------------------------------------------------------------------------

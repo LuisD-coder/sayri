@@ -1,18 +1,27 @@
 from models import db
 from datetime import datetime
+from sqlalchemy.orm import relationship
 
 class Pago(db.Model):
     __tablename__ = 'pago'
 
     id = db.Column(db.Integer, primary_key=True)
-    cliente_id = db.Column(db.Integer, db.ForeignKey('cliente.id'), nullable=False)
     prestamo_individual_id = db.Column(db.Integer, db.ForeignKey('prestamoindividual.id'), nullable=False)
-    monto_pendiente = db.Column(db.Numeric(10, 2), nullable=True)
-    monto_pagado = db.Column(db.Numeric(10, 2), nullable=True)
-    estado = db.Column(db.String(20), default="Pendiente")
+    cliente_id = db.Column(db.Integer, db.ForeignKey('cliente.id'), nullable=False)
     fecha_pago = db.Column(db.Date, nullable=False)
-
-    cliente = db.relationship('Cliente', backref='pagos')
+    monto_pagado = db.Column(db.Float, default=0.0)
+    estado = db.Column(db.String(50), default='Pendiente')
+    monto_pendiente = db.Column(db.Float, default=0.0)
     
-    # Usamos back_populates en lugar de backref
-    prestamo_individual = db.relationship('PrestamoIndividual', back_populates='pagos')
+    # ------------------- CAMPOS AGREGADOS -------------------
+    fecha_cancelacion_pago_cuota = db.Column(db.Date, nullable=True)
+    dias_atraso = db.Column(db.Integer, default=0)
+    monto_mora = db.Column(db.Float, default=0.0) # Cargo por mora
+    # --------------------------------------------------------
+
+    # Relaciones
+    prestamo_individual = relationship('PrestamoIndividual', back_populates='pagos')
+    cliente = relationship('Cliente', back_populates='pagos')
+
+    def __repr__(self):
+        return f'<Pago {self.id}>'

@@ -1,12 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}Lista de Pagos{% endblock %}
+{% block title %}Gestión de Pagos{% endblock %}
 
 {% block content %}
 <div class="container py-5">
     <h2 class="text-center mb-4 text-white bg-dark p-3 rounded">Gestión de Pagos</h2>
 
-    <!-- Formulario de selección de grupo -->
     <div class="card shadow-lg border-0 mb-4">
         <div class="card-body">
             <form method="GET" action="{{ url_for('pagos.lista_pagos') }}">
@@ -29,125 +28,172 @@
     </div>
 
     {% if selected_grupo %}
-        <h3 class="text-center mb-4 text-white bg-primary p-3 rounded">Préstamos del Grupo: <span class="fw-bold">{{ selected_grupo.nombre }}</span></h3>
+        <h3 class="text-center mb-4 text-white bg-primary p-3 rounded">Pagos del Grupo: <span class="fw-bold">{{ selected_grupo.nombre }}</span></h3>
 
-        {% for prestamo_grupal in prestamos_grupales %}
-            <div class="card mb-4 shadow-lg border-0">
-                <div class="card-header bg-dark text-white">
-                    <h5 class="mb-0">Préstamo Grupal ID: {{ prestamo_grupal.id }}</h5>
-                </div>
-                <div class="card-body">
-                    <p><strong>Monto Total:</strong> S/. {{ prestamo_grupal.monto_total }}</p>
-                    <p><strong>Fecha de Desembolso:</strong> {{ prestamo_grupal.fecha_desembolso.strftime('%d/%m/%Y') }}</p>
+        <form id="pagos-form" method="POST" action="{{ url_for('pagos.guardar_pagos', grupo_id=selected_grupo.id) }}">
+            {% for prestamo_grupal in prestamos_grupales %}
+                <div class="card mb-4 shadow-lg border-0">
+                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Préstamo Grupal: S/. {{ prestamo_grupal.monto_total }}</h5>
+                        <small>Desembolso: {{ prestamo_grupal.fecha_desembolso.strftime('%d/%m/%Y') }}</small>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="row bg-light py-2 px-3 fw-bold border-bottom d-none d-md-flex">
+                            <div class="col-md-4">Cliente</div>
+                            <div class="col-md-2 text-center">Fecha de Pago</div>
+                            <div class="col-md-2 text-center">Cuota</div>
+                            <div class="col-md-2 text-center">Abono</div>
+                            <div class="col-md-2 text-center">Pago Completo</div>
+                        </div>
 
-                    <h5 class="mt-4 text-primary">Préstamos Individuales:</h5>
-
-                    <div class="row">
                         {% for prestamo in prestamo_grupal.prestamos_individuales %}
-  <div class="col-md-6">
-    <div class="card my-3 border-0 shadow-sm">
-      <div class="card-body">
-        <h6 class="mb-2 text-dark"><strong>Cliente:</strong> {{ prestamo.cliente.nombre }} {{ prestamo.cliente.apellido }}</h6>
-        <p class="mb-1"><strong>Monto Préstamo:</strong> S/. {{ prestamo.monto }}</p>
-        <p class="mb-1"><strong>Monto Pendiente:</strong> S/. {{ prestamo.monto_pendiente }}</p>
+                            {% set pagos_ordenados = prestamo.pagos|sort(attribute='fecha_pago') %}
+                            {% set pago_activo = prestamo.pagos|selectattr('estado', 'in', ['Pendiente', 'Atrasado', 'Incompleto'])|sort(attribute='fecha_pago')|first %}
+                            {% set numero_cuota = loop.index if not pago_activo else (pagos_ordenados.index(pago_activo) + 1) %}
 
-        <!-- Formulario de pago -->
-        <form action="{{ url_for('pagos.agregar_pago', prestamo_id=prestamo.id) }}" method="POST" class="mt-3 p-3 bg-light shadow-sm rounded">
-          <div class="row g-3">
-            <div class="col-md-4">
-              <label class="form-label fw-semibold">Fecha de Pago:</label>
-              <select name="fecha_pago" class="form-select border-info" required>
-                <option value="">Selecciona una fecha</option>
-                {% for pago in prestamo.pagos %}
-                  <option value="{{ pago.fecha_pago.strftime('%Y-%m-%d') }}" {% if pago.estado == 'Pagado' %}disabled{% endif %}>
-                    {{ pago.fecha_pago.strftime('%d/%m/%Y') }} 
-                    {% if pago.estado == 'Pagado' %}
-                      (✅ Pagado)
-                    {% elif pago.estado == 'Pendiente' %}
-                      (⏳ Pendiente)
-                    {% elif pago.estado == 'Atrasado' %}
-                      (⚠️ Atrasado)
-                    {% elif pago.estado == 'Incompleto' %}
-                      (- Incompleto)
-                    {% endif %}
-                  </option>
-                {% endfor %}
-              </select>
-            </div>
+                            {% set row_class = "" %}
+                            {% if pago_activo and pago_activo.estado == 'Incompleto' %}
+                                {% set row_class = "pago-incompleto" %}
+                            {% elif pago_activo and pago_activo.estado == 'Atrasado' %}
+                                {% set row_class = "pago-atrasado" %}
+                            {% endif %}
 
-            <div class="col-md-4">
-              <label class="form-label fw-semibold">Estado:</label>
-              <select name="estado_pago" id="estado_pago_{{ prestamo.id }}" class="form-select border-info estado-pago" required data-prestamo-id="{{ prestamo.id }}">
-                <option value="Pendiente">Pendiente</option>
-                <option value="Pagado">Pagado</option>
-                <option value="Atrasado">Atrasado</option>
-                <option value="Incompleto">Incompleto</option>
-              </select>
-            </div>
-            
-            <div class="col-md-4" id="monto_pagado_container_{{ prestamo.id }}">
-              <label class="form-label fw-semibold">Monto Pagado:</label>
-              <p class="fw-bold text-success" id="monto_pagado_{{ prestamo.id }}">S/. {{ prestamo.monto_pagado }}</p>
-              <input type="number" name="monto_pago" id="input_monto_pagado_{{ prestamo.id }}" class="form-control border-info d-none" step="0.01" placeholder="Ingrese el monto">
-            </div>
+                            <div class="row align-items-center py-2 px-3 mb-3 border-bottom-dashed {{ row_class }}">
+                                <div class="col-md-4 col-12 mb-2 mb-md-0">
+                                    <strong class="d-md-none">Cliente: </strong>{{ prestamo.cliente.nombre }} {{ prestamo.cliente.apellido }}
+                                    <input type="hidden" name="prestamo_individual_id_{{ prestamo.id }}" value="{{ prestamo.id }}">
+                                </div>
+                                <div class="col-md-2 col-6 mb-2 mb-md-0 text-md-center">
+                                    <strong class="d-md-none">Fecha de Pago: </strong>
+                                    {% if pago_activo %}
+                                        <span class="fw-bold text-info">{{ pago_activo.fecha_pago.strftime('%d/%m/%Y') }}</span>
+                                        <br>
+                                        <span class="badge bg-secondary">Cuota #{{ numero_cuota }}</span>
+                                    {% else %}
+                                        <span class="text-secondary">No hay cuotas pendientes</span>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-2 col-6 mb-2 mb-md-0 text-md-center">
+                                    <strong class="d-md-none">Cuota: </strong>
+                                    <span class="monto-cuota-display fw-bold">S/. {{ '%.2f' % prestamo.obtener_numero_cuota() }}</span>
+                                </div>
+                                <div class="col-md-2 col-6 mb-2 mb-md-0 text-md-center">
+                                    <strong class="d-md-none">Abono: </strong>
+                                    <input type="number" name="monto_abonado_{{ prestamo.id }}"
+                                           class="form-control form-control-sm monto-abonado text-center"
+                                           step="0.01"
+                                           placeholder="0.00"
+                                           value="{{ '%.2f' % pago_activo.monto_pagado if pago_activo and pago_activo.estado == 'Incompleto' else '' }}"
+                                           data-cuota="{{ prestamo.obtener_numero_cuota() }}"
+                                           data-prestamo-id="{{ prestamo.id }}"
+                                           {% if not pago_activo %}disabled{% endif %}>
+                                </div>
+                                <div class="col-md-2 col-6 mb-2 mb-md-0 text-md-center">
+                                    <div class="form-check form-check-inline d-flex justify-content-center">
+                                        <input class="form-check-input pago-completo" type="checkbox"
+                                               name="pago_completo_{{ prestamo.id }}" 
+                                               id="pago_completo_{{ prestamo.id }}" 
+                                               value="true"
+                                               data-prestamo-id="{{ prestamo.id }}"
+                                               {% if not pago_activo or pago_activo.estado == 'Pagado' %}checked disabled{% endif %}>
+                                        <label class="form-check-label d-md-none" for="pago_completo_{{ prestamo.id }}">Completado</label>
+                                    </div>
+                                    {% if pago_activo and pago_activo.estado == 'Pagado' %}
+                                        <span class="badge bg-success ms-2 d-none d-md-inline">✅ Pagado</span>
+                                    {% elif pago_activo and pago_activo.estado == 'Incompleto' %}
+                                        <span class="badge bg-warning text-dark ms-2 d-none d-md-inline">⚠️ Incompleto: S/. {{ '%.2f' % pago_activo.monto_pendiente }}</span>
+                                    {% elif pago_activo and pago_activo.estado == 'Atrasado' %}
+                                        <span class="badge bg-danger ms-2 d-none d-md-inline">⚠️ Atrasado</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endfor %}
 
-            <div class="col-12">
-              <button type="submit" class="btn btn-success w-100 shadow">Añadir Pago</button>
-            </div>
-          </div>
-        </form>
-
-        <!-- Mostrar los días de retraso solo si el pago está atrasado -->
-        {% for pago in prestamo.pagos %}
-          {% if pago.estado == 'Atrasado' %}
-            <p class="mb-1 text-danger fw-bold"><strong>Días de Retraso:</strong> 
-              {% if current_date and pago.fecha_pago %}
-                {{ (current_date - pago.fecha_pago).days }} días
-              {% else %}
-                No disponible
-              {% endif %}
-            </p>
-          {% endif %}
-
-          {% if pago.estado == 'Pagado' %}
-            <p class="mb-1 text-success fw-bold"><strong>Pago Realizado:</strong> ✅ El pago fue realizado con éxito.</p>
-          {% endif %}
-        {% endfor %}
-      </div>
-    </div>
-  </div>
-{% endfor %}
-
-<script>
-    function toggleMontoPagado(prestamoId) {
-      const estadoPago = document.getElementById(`estado_pago_${prestamoId}`);
-      const montoPagadoLabel = document.getElementById(`monto_pagado_${prestamoId}`);
-      const montoPagadoInput = document.getElementById(`input_monto_pagado_${prestamoId}`);
-  
-      if (estadoPago.value === "Incompleto") {
-        montoPagadoLabel.classList.add("d-none");  // Ocultar el texto
-        montoPagadoInput.classList.remove("d-none");  // Mostrar el input
-      } else {
-        montoPagadoLabel.classList.remove("d-none");  // Mostrar el texto
-        montoPagadoInput.classList.add("d-none");  // Ocultar el input
-      }
-    }
-  
-    // Agregar controladores de eventos a todos los selectores de estado de pago
-    document.addEventListener("DOMContentLoaded", function() {
-      const estadoPagos = document.querySelectorAll(".estado-pago");
-      estadoPagos.forEach(function(select) {
-        const prestamoId = select.getAttribute("data-prestamo-id");
-        select.addEventListener("change", function() {
-          toggleMontoPagado(prestamoId);
-        });
-      });
-    });
-  </script>
+            <div class="row mt-4">
+                <div class="col-md-6 offset-md-6">
+                    <div class="card shadow-sm border-0 bg-light p-3">
+                        <h5 class="mb-2 text-dark">Total Cuota Grupo: S/. <span id="total_cuota_grupo" class="fw-bold">0.00</span></h5>
+                        <h5 class="mb-0 text-primary">Suma de Abonos: S/. <span id="suma_total_abonos" class="fw-bold">0.00</span></h5>
                     </div>
                 </div>
             </div>
-        {% endfor %}
+
+            <div class="text-center mt-5">
+                <button type="submit" class="btn btn-success btn-lg shadow">Guardar Pagos del Grupo</button>
+            </div>
+        </form>
     {% endif %}
 </div>
+
+<style>
+    .pago-incompleto {
+        background-color: #fff3cd !important; /* Color de fondo amarillo claro */
+        border: 2px solid #ffc107; /* Borde amarillo más visible */
+        border-radius: 0.5rem;
+    }
+    .pago-atrasado {
+        background-color: #f8d7da !important; /* Color de fondo rojo claro */
+        border: 2px solid #dc3545; /* Borde rojo más visible */
+        border-radius: 0.5rem;
+    }
+</style>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const pagosForm = document.getElementById('pagos-form');
+        const montoAbonadoInputs = pagosForm.querySelectorAll('.monto-abonado:not([disabled])');
+        const pagoCompletoCheckboxes = pagosForm.querySelectorAll('.pago-completo:not([disabled])');
+        const totalCuotaGrupoSpan = document.getElementById('total_cuota_grupo');
+        const sumaTotalAbonosSpan = document.getElementById('suma_total_abonos');
+
+        function calcularTotales() {
+            let totalCuotaGrupo = 0;
+            let sumaTotalAbonos = 0;
+
+            pagosForm.querySelectorAll('.monto-abonado').forEach(input => {
+                const montoCuota = parseFloat(input.getAttribute('data-cuota')) || 0;
+                totalCuotaGrupo += montoCuota;
+
+                const montoAbonado = parseFloat(input.value) || 0;
+                sumaTotalAbonos += montoAbonado;
+            });
+
+            totalCuotaGrupoSpan.textContent = totalCuotaGrupo.toFixed(2);
+            sumaTotalAbonosSpan.textContent = sumaTotalAbonos.toFixed(2);
+        }
+
+        montoAbonadoInputs.forEach(input => {
+            input.addEventListener('input', calcularTotales);
+        });
+
+        pagoCompletoCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const prestamoId = this.getAttribute('data-prestamo-id');
+                const montoInput = document.querySelector(`input[name="monto_abonado_${prestamoId}"]`);
+                const montoCuota = parseFloat(montoInput.getAttribute('data-cuota'));
+
+                if (this.checked) {
+                    montoInput.value = montoCuota.toFixed(2);
+                } else if (montoInput.value === montoCuota.toFixed(2)) {
+                    montoInput.value = '';
+                }
+                calcularTotales();
+            });
+        });
+
+        pagosForm.querySelectorAll('.pago-completo').forEach(checkbox => {
+            const prestamoId = checkbox.getAttribute('data-prestamo-id');
+            const montoInput = document.querySelector(`input[name="monto_abonado_${prestamoId}"]`);
+            if (checkbox.checked && !checkbox.disabled) {
+                 const montoCuota = parseFloat(montoInput.getAttribute('data-cuota'));
+                 montoInput.value = montoCuota.toFixed(2);
+            }
+        });
+
+        calcularTotales();
+    });
+</script>
 {% endblock %}
