@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from models import db, PrestamoGrupal, Grupo, PrestamoIndividual, Pago, Cliente, Contrato
 from datetime import datetime, timedelta
 import fitz
@@ -329,7 +329,8 @@ def generar_contrato(prestamo_grupal_id):
 # ==============================================================================
 # FUNCION LOGICA PARA GENERAR UN CONTRATO INDIVIDUAL (AJUSTADA Y CORREGIDA)
 # ==============================================================================
-def generar_contrato_logic(cliente_id, prestamo_grupal, return_type='response'):
+def generar_contrato_logic(cliente_id, prestamo_grupal, return_type='response'): 
+
     current_app.logger.debug(f"DEBUG: [generar_contrato_logic] Iniciando para cliente_id={cliente_id}, prestamo_grupal_id={prestamo_grupal.id}")
 
     cliente = Cliente.query.get_or_404(cliente_id)
@@ -476,3 +477,191 @@ def generar_contrato_logic(cliente_id, prestamo_grupal, return_type='response'):
             'Content-Length': str(len(pdf_bytes_para_db))
         }
         return Response(pdf_bytes_para_db, headers=headers)
+
+
+
+
+@prestamos_grupales_bp.route('/<int:prestamo_grupal_id>/reporte_pagos')
+@login_required
+def reporte_pagos(prestamo_grupal_id):
+    # Obtener el préstamo grupal
+    prestamo_grupal = PrestamoGrupal.query.get_or_404(prestamo_grupal_id)
+    
+    # Obtener todos los préstamos individuales de este préstamo grupal
+    prestamos_individuales = PrestamoIndividual.query.filter_by(
+        prestamo_grupal_id=prestamo_grupal_id
+    ).all()
+    
+    # Organizar datos por cliente
+    clientes_data = {}
+    total_pagado = 0
+    total_pendiente = 0 
+    total_mora = 0
+    total_registros = 0
+    
+    for prestamo_individual in prestamos_individuales:
+        cliente = Cliente.query.get(prestamo_individual.cliente_id)
+        pagos = Pago.query.filter_by(
+            prestamo_individual_id=prestamo_individual.id
+        ).order_by(Pago.fecha_pago.desc()).all()  # Orden descendente por fecha
+        
+        if cliente.id not in clientes_data:
+            clientes_data[cliente.id] = {
+                'cliente': cliente,
+                'prestamo_individual': prestamo_individual,
+                'pagos': []
+            }
+        
+        # Agregar pagos y calcular totales
+        cliente_total_pagado = 0
+        cliente_total_pendiente = 0
+        cliente_total_mora = 0
+        cliente_pagos_completados = 0
+        
+        for pago in pagos:
+            clientes_data[cliente.id]['pagos'].append(pago)
+            
+            # Sumar a totales generales
+            pago_pagado = pago.monto_pagado or 0
+            pago_pendiente = pago.monto_pendiente or 0
+            pago_mora = pago.monto_mora or 0
+            
+            total_pagado += pago_pagado
+            total_pendiente += pago_pendiente
+            total_mora += pago_mora
+            total_registros += 1
+            
+            # Sumar a totales del cliente
+            cliente_total_pagado += pago_pagado
+            cliente_total_pendiente += pago_pendiente
+            cliente_total_mora += pago_mora
+            
+            # Contar pagos completados
+            if pago.estado == 'Pagado':
+                cliente_pagos_completados += 1
+        
+        # Agregar resúmenes del cliente
+        clientes_data[cliente.id]['resumen'] = {
+            'total_pagado': cliente_total_pagado,
+            'total_pendiente': cliente_total_pendiente,
+            'total_mora': cliente_total_mora,
+            'pagos_completados': cliente_pagos_completados,
+            'total_pagos': len(pagos)
+        }
+    
+    # Convertir a lista y ordenar por nombre de cliente
+    clientes_list = list(clientes_data.values())
+    clientes_list.sort(key=lambda x: f"{x['cliente'].nombre} {x['cliente'].apellido}")
+    
+    return render_template(
+        'reportes/reporte_pagos.html',
+        prestamo_grupal=prestamo_grupal,
+        clientes_data=clientes_list,
+        total_pagado=total_pagado,
+        total_pendiente=total_pendiente,
+        total_mora=total_mora,
+        total_registros=total_registros
+    )
+
+@prestamos_grupales_bp.route('/pago/<int:pago_id>/datos', methods=['GET'])
+@login_required
+def obtener_datos_pago(pago_id):
+    """Obtener los datos de un pago específico para edición"""
+    try:
+        pago = Pago.query.get_or_404(pago_id)
+        
+        # Formatear las fechas para el formulario HTML
+        fecha_pago = pago.fecha_pago.strftime('%Y-%m-%d') if pago.fecha_pago else ''
+        fecha_cancelacion = ''
+        if pago.fecha_cancelacion_pago_cuota:
+            fecha_cancelacion = pago.fecha_cancelacion_pago_cuota.strftime('%Y-%m-%d')
+        
+        datos_pago = {
+            'fecha_pago': fecha_pago,
+            'monto_pagado': float(pago.monto_pagado) if pago.monto_pagado is not None else 0.0,
+            'monto_pendiente': float(pago.monto_pendiente) if pago.monto_pendiente is not None else 0.0,
+            'estado': pago.estado or 'Pendiente',
+            'dias_atraso': pago.dias_atraso if pago.dias_atraso is not None else 0,
+            'monto_mora': float(pago.monto_mora) if pago.monto_mora is not None else 0.0,
+            'fecha_cancelacion_pago_cuota': fecha_cancelacion
+        }
+        
+        return {'success': True, 'pago': datos_pago}
+    
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener datos del pago {pago_id}: {str(e)}")
+        return {'success': False, 'message': str(e)}, 500
+
+
+@prestamos_grupales_bp.route('/pago/<int:pago_id>/editar', methods=['POST'])
+@login_required  
+def editar_pago(pago_id):
+    """Actualizar los datos de un pago"""
+    try:
+        pago = Pago.query.get_or_404(pago_id)
+        
+        # Obtener los datos del formulario
+        fecha_pago_str = request.form.get('fecha_pago')
+        monto_pagado = request.form.get('monto_pagado')
+        monto_pendiente = request.form.get('monto_pendiente') 
+        estado = request.form.get('estado')
+        dias_atraso = request.form.get('dias_atraso')
+        monto_mora = request.form.get('monto_mora')
+        fecha_cancelacion_str = request.form.get('fecha_cancelacion_pago_cuota')
+        
+        # Validar y convertir fecha_pago
+        if fecha_pago_str:
+            try:
+                pago.fecha_pago = datetime.strptime(fecha_pago_str, '%Y-%m-%d').date()
+            except ValueError:
+                return {'success': False, 'message': 'Formato de fecha de pago inválido'}, 400
+        
+        # Validar y convertir monto_pagado
+        try:
+            pago.monto_pagado = float(monto_pagado) if monto_pagado else 0.0
+        except (ValueError, TypeError):
+            return {'success': False, 'message': 'Monto pagado inválido'}, 400
+        
+        # Validar y convertir monto_pendiente
+        try:
+            pago.monto_pendiente = float(monto_pendiente) if monto_pendiente else 0.0
+        except (ValueError, TypeError):
+            return {'success': False, 'message': 'Monto pendiente inválido'}, 400
+        
+        # Actualizar estado
+        if estado in ['Pendiente', 'Pagado', 'Incompleto', 'Vencido']:
+            pago.estado = estado
+        else:
+            return {'success': False, 'message': 'Estado inválido'}, 400
+        
+        # Validar y convertir dias_atraso
+        try:
+            pago.dias_atraso = int(dias_atraso) if dias_atraso else 0
+        except (ValueError, TypeError):
+            return {'success': False, 'message': 'Días de atraso inválido'}, 400
+        
+        # Validar y convertir monto_mora
+        try:
+            pago.monto_mora = float(monto_mora) if monto_mora else 0.0
+        except (ValueError, TypeError):
+            return {'success': False, 'message': 'Monto de mora inválido'}, 400
+        
+        # Validar y convertir fecha_cancelacion
+        if fecha_cancelacion_str:
+            try:
+                pago.fecha_cancelacion_pago_cuota = datetime.strptime(fecha_cancelacion_str, '%Y-%m-%d').date()
+            except ValueError:
+                return {'success': False, 'message': 'Formato de fecha de cancelación inválido'}, 400
+        else:
+            pago.fecha_cancelacion_pago_cuota = None
+        
+        # Guardar cambios
+        db.session.commit()
+        
+        current_app.logger.info(f"Pago {pago_id} actualizado correctamente por el usuario")
+        return {'success': True, 'message': 'Pago actualizado correctamente'}
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error al actualizar el pago {pago_id}: {str(e)}")
+        return {'success': False, 'message': f'Error interno: {str(e)}'}, 500

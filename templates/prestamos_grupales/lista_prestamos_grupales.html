@@ -49,6 +49,10 @@
                                 <a href="{{ url_for('prestamos_grupales.generar_contrato', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-outline-warning">
                                     <i class="bi bi-file-earmark-pdf"></i> Generar Contrato
                                 </a>
+                                <!-- Agregar este botón en la sección de botones existentes -->
+                                <a href="{{ url_for('prestamos_grupales.reporte_pagos', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-outline-info">
+                                    <i class="bi bi-file-earmark-text"></i> Reporte Pagos
+                                </a>
                             </div>
                             <!-- Botón para eliminar préstamo grupal -->
 <form method="POST" action="{{ url_for('prestamos_grupales.eliminar_prestamo_grupal', prestamo_grupal_id=prestamo.id) }}" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este préstamo grupal?')">
