@@ -114,11 +114,18 @@
                                             {% endif %}
                                         </td>
                                         <td>
-                                            <div class="btn-group" role="group">
-                                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="editarPago({{ pago.id }}, '{{ cliente_info.cliente.nombre }} {{ cliente_info.cliente.apellido }}')">
-                                                    <i class="bi bi-pencil"></i>
-                                                </button>
-                                            </div>
+                                            {% if current_user.rol.nombre == 'admin' %}
+                                                <div class="btn-group" role="group">
+                                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="editarPago({{ pago.id }}, '{{ cliente_info.cliente.nombre }} {{ cliente_info.cliente.apellido }}')">
+                                                        <i class="bi bi-pencil"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarPago({{ pago.id }}, '{{ cliente_info.cliente.nombre }} {{ cliente_info.cliente.apellido }}')">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </div>
+                                            {% else %}
+                                                <span class="text-muted"><i class="bi bi-lock"></i></span>
+                                            {% endif %}
                                         </td>
                                     </tr>
                                     {% endfor %}
@@ -275,8 +282,37 @@
     </div>
 </div>
 
+<!-- Modal de confirmación para eliminar pago -->
+<div class="modal fade" id="confirmarEliminarModal" tabindex="-1" aria-labelledby="confirmarEliminarModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="confirmarEliminarModalLabel">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center">
+                    <i class="bi bi-exclamation-triangle-fill text-warning" style="font-size: 3rem;"></i>
+                    <h6 class="mt-3">¿Estás seguro de que deseas eliminar este pago?</h6>
+                    <p class="text-muted mb-3">
+                        Cliente: <strong id="clienteEliminar"></strong><br>
+                        <small>Esta acción no se puede deshacer.</small>
+                    </p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" onclick="confirmarEliminacion()">
+                    <i class="bi bi-trash"></i> Eliminar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 let pagoActualId = null;
+let pagoEliminarId = null;
 
 function editarPago(pagoId, clienteNombre) {
     pagoActualId = pagoId;
@@ -313,7 +349,59 @@ function editarPago(pagoId, clienteNombre) {
         });
 }
 
-// Manejar envío del formulario
+function eliminarPago(pagoId, clienteNombre) {
+    pagoEliminarId = pagoId;
+    
+    // Establecer el nombre del cliente en el modal de confirmación
+    document.getElementById('clienteEliminar').textContent = clienteNombre;
+    
+    // Mostrar el modal de confirmación
+    new bootstrap.Modal(document.getElementById('confirmarEliminarModal')).show();
+}
+
+function confirmarEliminacion() {
+    if (!pagoEliminarId) return;
+    
+    // Hacer petición AJAX para eliminar el pago
+    fetch(`/prestamos_grupales/pago/${pagoEliminarId}/eliminar`, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Cerrar el modal de confirmación
+            bootstrap.Modal.getInstance(document.getElementById('confirmarEliminarModal')).hide();
+            
+            // Mostrar mensaje de éxito
+            const alertDiv = document.createElement('div');
+            alertDiv.className = 'alert alert-success alert-dismissible fade show';
+            alertDiv.innerHTML = `
+                <strong>¡Éxito!</strong> El pago se ha eliminado correctamente.
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            // Insertar el mensaje al inicio del contenedor
+            const container = document.querySelector('.container');
+            container.insertBefore(alertDiv, container.firstChild);
+            
+            // Recargar la página después de un breve delay
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
+        } else {
+            alert('Error al eliminar el pago: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al eliminar el pago');
+    });
+}
+
+// Manejar envío del formulario de edición
 document.getElementById('formEditarPago').addEventListener('submit', function(e) {
     e.preventDefault();
     

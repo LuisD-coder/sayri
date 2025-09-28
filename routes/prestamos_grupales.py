@@ -1,4 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask_login import current_user
 from models import db, PrestamoGrupal, Grupo, PrestamoIndividual, Pago, Cliente, Contrato
 from datetime import datetime, timedelta
 import fitz
@@ -664,4 +665,32 @@ def editar_pago(pago_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error al actualizar el pago {pago_id}: {str(e)}")
+        return {'success': False, 'message': f'Error interno: {str(e)}'}, 500
+
+
+@prestamos_grupales_bp.route('/pago/<int:pago_id>/eliminar', methods=['DELETE'])
+@login_required
+def eliminar_pago(pago_id):
+    """Eliminar un pago - Solo para administradores"""
+    try:
+        # Verificar que el usuario actual sea administrador
+        if not current_user.rol or current_user.rol.nombre != 'admin':
+            return {'success': False, 'message': 'No tienes permisos para realizar esta acción'}, 403
+        
+        pago = Pago.query.get_or_404(pago_id)
+        
+        # Obtener información del pago antes de eliminarlo para el log
+        cliente = Cliente.query.get(pago.cliente_id)
+        prestamo_individual = PrestamoIndividual.query.get(pago.prestamo_individual_id)
+        
+        # Eliminar el pago
+        db.session.delete(pago)
+        db.session.commit()
+        
+        current_app.logger.info(f"Pago {pago_id} eliminado correctamente por el usuario {current_user.id} (admin). Cliente: {cliente.nombre if cliente else 'N/A'}")
+        return {'success': True, 'message': 'Pago eliminado correctamente'}
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error al eliminar el pago {pago_id}: {str(e)}")
         return {'success': False, 'message': f'Error interno: {str(e)}'}, 500
