@@ -513,6 +513,19 @@ def reporte_pagos(prestamo_grupal_id):
                 'pagos': []
             }
         
+    for prestamo_individual in prestamos_individuales:
+        cliente = Cliente.query.get(prestamo_individual.cliente_id)
+        pagos = Pago.query.filter_by(
+            prestamo_individual_id=prestamo_individual.id
+        ).order_by(Pago.fecha_pago.desc()).all()  # Orden descendente por fecha
+        
+        if cliente.id not in clientes_data:
+            clientes_data[cliente.id] = {
+                'cliente': cliente,
+                'prestamo_individual': prestamo_individual,
+                'pagos': []
+            }
+        
         # Agregar pagos y calcular totales
         cliente_total_pagado = 0
         cliente_total_pendiente = 0
@@ -520,6 +533,16 @@ def reporte_pagos(prestamo_grupal_id):
         cliente_pagos_completados = 0
         
         for pago in pagos:
+            # Verificar si tiene abonos parciales
+            try:
+                from models.pago_parcial import PagoParcial
+                tiene_abonos_parciales = PagoParcial.query.filter_by(pago_id=pago.id).count() > 0
+                # Agregar atributo temporal al objeto pago
+                pago.tiene_abonos_parciales = tiene_abonos_parciales
+            except:
+                # Si no existe la tabla o modelo, marcar como False
+                pago.tiene_abonos_parciales = False
+            
             clientes_data[cliente.id]['pagos'].append(pago)
             
             # Sumar a totales generales
@@ -693,4 +716,51 @@ def eliminar_pago(pago_id):
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error al eliminar el pago {pago_id}: {str(e)}")
+        return {'success': False, 'message': f'Error interno: {str(e)}'}, 500
+
+
+@prestamos_grupales_bp.route('/pago/<int:pago_id>/historial_abonos', methods=['GET'])
+@login_required
+def obtener_historial_abonos(pago_id):
+    """Obtener el historial de abonos parciales de un pago específico"""
+    try:
+        pago = Pago.query.get_or_404(pago_id)
+        
+        # Obtener todos los abonos parciales de este pago
+        from models.pago_parcial import PagoParcial  # Importar aquí para evitar dependencias circulares
+        abonos = PagoParcial.query.filter_by(pago_id=pago_id).order_by(PagoParcial.fecha_abono.desc()).all()
+        
+        # Obtener información del préstamo individual para calcular monto de cuota
+        prestamo_individual = PrestamoIndividual.query.get(pago.prestamo_individual_id)
+        monto_cuota = prestamo_individual.obtener_numero_cuota() if prestamo_individual else 0
+        
+        # Formatear datos de abonos
+        abonos_data = []
+        for abono in abonos:
+            usuario_nombre = "Sistema"
+            if abono.usuario_registro_id:
+                from models.usuario import Usuario
+                usuario = Usuario.query.get(abono.usuario_registro_id)
+                if usuario:
+                    usuario_nombre = f"{usuario.nombre} {usuario.apellido}"
+            
+            abonos_data.append({
+                'id': abono.id,
+                'monto_abono': float(abono.monto_abono),
+                'fecha_abono': abono.fecha_abono.strftime('%d/%m/%Y %H:%M') if abono.fecha_abono else '',
+                'observaciones': abono.observaciones,
+                'usuario': usuario_nombre
+            })
+        
+        return {
+            'success': True,
+            'abonos': abonos_data,
+            'fecha_pago': pago.fecha_pago.strftime('%d/%m/%Y') if pago.fecha_pago else '',
+            'monto_cuota': float(monto_cuota),
+            'monto_pendiente': float(pago.monto_pendiente) if pago.monto_pendiente is not None else 0.0,
+            'estado_pago': pago.estado
+        }
+        
+    except Exception as e:
+        current_app.logger.error(f"Error al obtener historial de abonos para pago {pago_id}: {str(e)}")
         return {'success': False, 'message': f'Error interno: {str(e)}'}, 500

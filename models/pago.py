@@ -22,6 +22,13 @@ class Pago(db.Model):
     # Relaciones
     prestamo_individual = relationship('PrestamoIndividual', back_populates='pagos')
     cliente = relationship('Cliente', back_populates='pagos')
+    pagos_parciales = relationship('PagoParcial', back_populates='pago', cascade='all, delete-orphan')
+
+
+    def total_abonos_parciales(self):
+    #Calcula el total de todos los abonos parciales registrados
+        return sum(abono.monto_abono for abono in self.pagos_parciales)
 
     def __repr__(self):
         return f'<Pago {self.id}>'
+    

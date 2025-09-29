@@ -1,0 +1,35 @@
+<!-- Agregar esto donde necesites mostrar el detalle de abonos -->
+<div class="modal fade" id="historialAbonosModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Historial de Abonos</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Monto Abono</th>
+                                <th>Usuario</th>
+                                <th>Observaciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historialAbonosBody">
+                            <!-- Se llena dinámicamente -->
+                        </tbody>
+                        <tfoot>
+                            <tr class="table-info">
+                                <th>Total Abonado:</th>
+                                <th id="totalAbonado">S/ 0.00</th>
+                                <th colspan="2"></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

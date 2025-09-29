@@ -10,4 +10,4 @@ from models.pago import Pago  # Aquí está importado al final
 from models.contrato import Contrato
 from models.rol import Rol
 from models.usuario import Usuario
-
+from models.pago_parcial import PagoParcial

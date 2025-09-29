@@ -114,16 +114,22 @@
                                             {% endif %}
                                         </td>
                                         <td>
-                                            {% if current_user.rol.nombre == 'admin' %}
-                                                <div class="btn-group" role="group">
+                                            <div class="btn-group" role="group">
+                                                {% if pago.tiene_abonos_parciales %}
+                                                    <button type="button" class="btn btn-sm btn-outline-info" onclick="verHistorialAbonos({{ pago.id }}, '{{ cliente_info.cliente.nombre }} {{ cliente_info.cliente.apellido }}')" title="Ver historial de abonos">
+                                                        <i class="bi bi-clock-history"></i>
+                                                    </button>
+                                                {% endif %}
+                                                {% if current_user.rol.nombre == 'admin' %}
                                                     <button type="button" class="btn btn-sm btn-outline-primary" onclick="editarPago({{ pago.id }}, '{{ cliente_info.cliente.nombre }} {{ cliente_info.cliente.apellido }}')">
                                                         <i class="bi bi-pencil"></i>
                                                     </button>
                                                     <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarPago({{ pago.id }}, '{{ cliente_info.cliente.nombre }} {{ cliente_info.cliente.apellido }}')">
                                                         <i class="bi bi-trash"></i>
                                                     </button>
-                                                </div>
-                                            {% else %}
+                                                {% endif %}
+                                            </div>
+                                            {% if not pago.tiene_abonos_parciales and current_user.rol.nombre != 'admin' %}
                                                 <span class="text-muted"><i class="bi bi-lock"></i></span>
                                             {% endif %}
                                         </td>
@@ -282,6 +288,77 @@
     </div>
 </div>
 
+<!-- Modal para ver historial de abonos -->
+<div class="modal fade" id="historialAbonosModal" tabindex="-1" aria-labelledby="historialAbonosModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
+                <h5 class="modal-title" id="historialAbonosModalLabel">
+                    <i class="bi bi-clock-history"></i> Historial de Abonos
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <h6 class="text-primary">Cliente: <span id="clienteHistorial"></span></h6>
+                    <small class="text-muted">Fecha de Pago: <span id="fechaPagoHistorial"></span></small>
+                </div>
+                
+                <div id="loadingHistorial" class="text-center p-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <p class="mt-2">Cargando historial de abonos...</p>
+                </div>
+                
+                <div id="contenidoHistorial" style="display: none;">
+                    <div class="table-responsive">
+                        <table class="table table-striped table-sm">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Fecha Abono</th>
+                                    <th>Monto</th>
+                                    <th>Usuario</th>
+                                    <th>Observaciones</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaHistorialAbonos">
+                                <!-- Se llena dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div class="alert alert-light border mt-3">
+                        <div class="row text-center">
+                            <div class="col-md-4">
+                                <small class="text-muted">Total Abonos:</small><br>
+                                <strong class="text-success" id="totalAbonos">S/ 0.00</strong>
+                            </div>
+                            <div class="col-md-4">
+                                <small class="text-muted">Monto Cuota:</small><br>
+                                <strong class="text-primary" id="montoCuota">S/ 0.00</strong>
+                            </div>
+                            <div class="col-md-4">
+                                <small class="text-muted">Pendiente:</small><br>
+                                <strong class="text-warning" id="montoPendiente">S/ 0.00</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="sinAbonos" style="display: none;" class="alert alert-info text-center">
+                    <i class="bi bi-info-circle fs-3"></i>
+                    <h6 class="mt-2">No hay abonos parciales registrados</h6>
+                    <p class="mb-0">Este pago no tiene abonos parciales asociados.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Modal de confirmación para eliminar pago -->
 <div class="modal fade" id="confirmarEliminarModal" tabindex="-1" aria-labelledby="confirmarEliminarModalLabel" aria-hidden="true">
     <div class="modal-dialog">
@@ -313,6 +390,67 @@
 <script>
 let pagoActualId = null;
 let pagoEliminarId = null;
+
+function verHistorialAbonos(pagoId, clienteNombre) {
+    // Establecer información del cliente
+    document.getElementById('clienteHistorial').textContent = clienteNombre;
+    
+    // Mostrar modal y estados de carga
+    const modal = new bootstrap.Modal(document.getElementById('historialAbonosModal'));
+    modal.show();
+    
+    // Mostrar loading
+    document.getElementById('loadingHistorial').style.display = 'block';
+    document.getElementById('contenidoHistorial').style.display = 'none';
+    document.getElementById('sinAbonos').style.display = 'none';
+    
+    // Hacer petición AJAX para obtener el historial
+    fetch(`/prestamos_grupales/pago/${pagoId}/historial_abonos`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('loadingHistorial').style.display = 'none';
+            
+            if (data.success) {
+                if (data.abonos && data.abonos.length > 0) {
+                    // Mostrar tabla con datos
+                    document.getElementById('contenidoHistorial').style.display = 'block';
+                    
+                    // Llenar información del pago
+                    document.getElementById('fechaPagoHistorial').textContent = data.fecha_pago;
+                    document.getElementById('montoCuota').textContent = `S/ ${data.monto_cuota}`;
+                    document.getElementById('montoPendiente').textContent = `S/ ${data.monto_pendiente}`;
+                    
+                    // Llenar tabla de abonos
+                    const tbody = document.getElementById('tablaHistorialAbonos');
+                    tbody.innerHTML = '';
+                    let totalAbonos = 0;
+                    
+                    data.abonos.forEach(abono => {
+                        const row = tbody.insertRow();
+                        row.innerHTML = `
+                            <td>${abono.fecha_abono}</td>
+                            <td><strong class="text-success">S/ ${parseFloat(abono.monto_abono).toFixed(2)}</strong></td>
+                            <td>${abono.usuario || 'Sistema'}</td>
+                            <td><small class="text-muted">${abono.observaciones || '-'}</small></td>
+                        `;
+                        totalAbonos += parseFloat(abono.monto_abono);
+                    });
+                    
+                    document.getElementById('totalAbonos').textContent = `S/ ${totalAbonos.toFixed(2)}`;
+                } else {
+                    // No hay abonos
+                    document.getElementById('sinAbonos').style.display = 'block';
+                }
+            } else {
+                alert('Error al cargar el historial: ' + data.message);
+            }
+        })
+        .catch(error => {
+            document.getElementById('loadingHistorial').style.display = 'none';
+            console.error('Error:', error);
+            alert('Error al cargar el historial de abonos');
+        });
+}
 
 function editarPago(pagoId, clienteNombre) {
     pagoActualId = pagoId;

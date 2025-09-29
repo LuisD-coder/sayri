@@ -39,10 +39,10 @@
                     </div>
                     <div class="card-body p-0">
                         <div class="row bg-light py-2 px-3 fw-bold border-bottom d-none d-md-flex">
-                            <div class="col-md-4">Cliente</div>
+                            <div class="col-md-3">Cliente</div>
                             <div class="col-md-2 text-center">Fecha de Pago</div>
                             <div class="col-md-2 text-center">Cuota</div>
-                            <div class="col-md-2 text-center">Abono</div>
+                            <div class="col-md-3 text-center">Nuevo Abono</div>
                             <div class="col-md-2 text-center">Pago Completo</div>
                         </div>
 
@@ -59,7 +59,7 @@
                             {% endif %}
 
                             <div class="row align-items-center py-2 px-3 mb-3 border-bottom-dashed {{ row_class }}">
-                                <div class="col-md-4 col-12 mb-2 mb-md-0">
+                                <div class="col-md-3 col-12 mb-2 mb-md-0">
                                     <strong class="d-md-none">Cliente: </strong>{{ prestamo.cliente.nombre }} {{ prestamo.cliente.apellido }}
                                     <input type="hidden" name="prestamo_individual_id_{{ prestamo.id }}" value="{{ prestamo.id }}">
                                 </div>
@@ -77,16 +77,28 @@
                                     <strong class="d-md-none">Cuota: </strong>
                                     <span class="monto-cuota-display fw-bold">S/. {{ '%.2f' % prestamo.obtener_numero_cuota() }}</span>
                                 </div>
-                                <div class="col-md-2 col-6 mb-2 mb-md-0 text-md-center">
-                                    <strong class="d-md-none">Abono: </strong>
-                                    <input type="number" name="monto_abonado_{{ prestamo.id }}"
-                                           class="form-control form-control-sm monto-abonado text-center"
-                                           step="0.01"
-                                           placeholder="0.00"
-                                           value="{{ '%.2f' % pago_activo.monto_pagado if pago_activo and pago_activo.estado == 'Incompleto' else '' }}"
-                                           data-cuota="{{ prestamo.obtener_numero_cuota() }}"
-                                           data-prestamo-id="{{ prestamo.id }}"
-                                           {% if not pago_activo %}disabled{% endif %}>
+                                <div class="col-md-3 col-6 mb-2 mb-md-0">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-8">
+                                            <strong class="d-md-none">Abono: </strong>
+                                            <input type="number" name="monto_abonado_{{ prestamo.id }}"
+                                                   class="form-control form-control-sm monto-abonado text-center"
+                                                   step="0.01"
+                                                   placeholder="0.00"
+                                                   value=""
+                                                   data-cuota="{{ prestamo.obtener_numero_cuota() }}"
+                                                   data-prestamo-id="{{ prestamo.id }}"
+                                                   {% if not pago_activo %}disabled{% endif %}>
+                                        </div>
+                                        <div class="col-md-4">
+                                            {% if pago_activo and pago_activo.estado == 'Incompleto' %}
+                                                <div class="text-center">
+                                                    <small class="text-muted d-block">Ya pagó:</small>
+                                                    <span class="badge bg-info text-dark">S/ {{ '%.2f' % pago_activo.monto_pagado }}</span>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="col-md-2 col-6 mb-2 mb-md-0 text-md-center">
                                     <div class="form-check form-check-inline d-flex justify-content-center">
@@ -101,7 +113,7 @@
                                     {% if pago_activo and pago_activo.estado == 'Pagado' %}
                                         <span class="badge bg-success ms-2 d-none d-md-inline">✅ Pagado</span>
                                     {% elif pago_activo and pago_activo.estado == 'Incompleto' %}
-                                        <span class="badge bg-warning text-dark ms-2 d-none d-md-inline">⚠️ Incompleto: S/. {{ '%.2f' % pago_activo.monto_pendiente }}</span>
+                                        <span class="badge bg-warning text-dark ms-2 d-none d-md-inline">⚠️ Pendiente: S/ {{ '%.2f' % pago_activo.monto_pendiente }}</span>
                                     {% elif pago_activo and pago_activo.estado == 'Atrasado' %}
                                         <span class="badge bg-danger ms-2 d-none d-md-inline">⚠️ Atrasado</span>
                                     {% endif %}
@@ -174,11 +186,34 @@
                 const prestamoId = this.getAttribute('data-prestamo-id');
                 const montoInput = document.querySelector(`input[name="monto_abonado_${prestamoId}"]`);
                 const montoCuota = parseFloat(montoInput.getAttribute('data-cuota'));
-
+                
+                // Obtener el monto ya pagado si existe (del badge)
+                const badgePagado = document.querySelector(`input[name="monto_abonado_${prestamoId}"]`)
+                    .closest('.col-md-3')
+                    .querySelector('.badge.bg-info');
+                
+                let montoYaPagado = 0;
+                if (badgePagado) {
+                    // Extraer el número del texto del badge "S/ XX.XX"
+                    const textoBadge = badgePagado.textContent.trim();
+                    const match = textoBadge.match(/S\/\s*([\d,]+\.?\d*)/);
+                    if (match) {
+                        montoYaPagado = parseFloat(match[1].replace(',', ''));
+                    }
+                }
+                
                 if (this.checked) {
-                    montoInput.value = montoCuota.toFixed(2);
-                } else if (montoInput.value === montoCuota.toFixed(2)) {
-                    montoInput.value = '';
+                    // Calcular el monto faltante
+                    const montoFaltante = montoCuota - montoYaPagado;
+                    montoInput.value = Math.max(0, montoFaltante).toFixed(2);
+                } else {
+                    // Si desmarca el checkbox, limpiar el input solo si contiene el valor calculado
+                    const valorActual = parseFloat(montoInput.value) || 0;
+                    const montoFaltante = montoCuota - montoYaPagado;
+                    
+                    if (Math.abs(valorActual - montoFaltante) < 0.01 || Math.abs(valorActual - montoCuota) < 0.01) {
+                        montoInput.value = '';
+                    }
                 }
                 calcularTotales();
             });
