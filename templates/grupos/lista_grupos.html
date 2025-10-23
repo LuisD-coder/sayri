@@ -10,10 +10,37 @@
         <a href="{{ url_for('grupos.nuevo_grupo') }}" class="btn btn-new-group">+ Nuevo Grupo</a>
     </div>
 
+    <!-- Panel de búsqueda y filtros -->
+    <div class="search-filter-panel">
+        <div class="search-section">
+            <input type="text" id="searchInput" class="search-input" placeholder="🔍 Buscar grupo por nombre...">
+        </div>
+        
+        <div class="filter-sort-section">
+            <div class="sort-section">
+                <label for="sortSelect">Ordenar por:</label>
+                <select id="sortSelect" class="sort-select">
+                    <option value="nombre-asc">Nombre (A-Z)</option>
+                    <option value="nombre-desc">Nombre (Z-A)</option>
+                    <option value="clientes-asc">Creditos Individuales</option>
+                </select>
+            </div>
+            
+            <button id="clearFilters" class="btn-clear">Limpiar filtros</button>
+        </div>
+        
+        <div class="results-counter">
+            Mostrando <span id="resultCount">{{ grupos|length }}</span> de <span id="totalCount">{{ grupos|length }}</span> grupos
+        </div>
+    </div>
+
     <!-- Contenedor de tarjetas -->
-    <div class="grupos-grid">
+    <div class="grupos-grid" id="gruposGrid">
         {% for grupo in grupos %}
-            <div class="grupo-card">
+            <div class="grupo-card" 
+                 data-nombre="{{ grupo.nombre|lower }}" 
+                 data-clientes="{{ grupo.clientes|length }}"
+                 data-prestamos="{{ grupo.prestamos_grupales|length }}">
                 <h3>
                     {{ grupo.nombre }}
                     <a href="{{ url_for('grupos.editar_grupo', grupo_id=grupo.id) }}" class="btn-edit-group" title="Editar Grupo">
@@ -37,6 +64,13 @@
                 </div>
             </div>
         {% endfor %}
+    </div>
+
+    <!-- Mensaje cuando no hay resultados -->
+    <div id="noResults" class="no-results" style="display: none;">
+        <i class="bi bi-search" style="font-size: 3rem; color: #ccc;"></i>
+        <h3>No se encontraron grupos</h3>
+        <p>Intenta ajustar tus filtros o búsqueda</p>
     </div>
 
     <style>
@@ -67,6 +101,97 @@
 
         .btn-new-group:hover {
             background: #0056b3;
+        }
+
+        /* Panel de búsqueda y filtros */
+        .search-filter-panel {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .search-section {
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 20px;
+            border: 2px solid #dee2e6;
+            border-radius: 25px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+
+        .filter-sort-section {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 20px;
+            align-items: start;
+        }
+
+        .sort-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .sort-section label {
+            font-weight: 600;
+            color: #495057;
+            font-size: 14px;
+        }
+
+        .sort-select {
+            padding: 8px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 5px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .filters-section {
+            display: none;
+        }
+
+        .filter-checkbox {
+            display: none;
+        }
+
+        .filter-checkbox input[type="checkbox"] {
+            display: none;
+        }
+
+        .btn-clear {
+            padding: 10px 20px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background-color 0.3s;
+            height: fit-content;
+        }
+
+        .btn-clear:hover {
+            background: #5a6268;
+        }
+
+        .results-counter {
+            text-align: center;
+            margin-top: 15px;
+            padding-top: 15px;
+            border-top: 1px solid #dee2e6;
+            font-weight: 600;
+            color: #495057;
         }
 
         /* Grid de grupos */
@@ -155,11 +280,109 @@
             display: inline-block;
         }
 
+        /* Mensaje sin resultados */
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+
+        .no-results h3 {
+            margin-top: 20px;
+            color: #495057;
+        }
+
         /* Adaptación para dispositivos móviles */
         @media screen and (max-width: 768px) {
             .grupos-grid {
                 grid-template-columns: 1fr;
             }
+
+            .filter-sort-section {
+                grid-template-columns: 1fr;
+            }
+
+            .btn-clear {
+                width: 100%;
+            }
         }
     </style>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('searchInput');
+            const sortSelect = document.getElementById('sortSelect');
+            const clearFiltersBtn = document.getElementById('clearFilters');
+            const gruposGrid = document.getElementById('gruposGrid');
+            const noResults = document.getElementById('noResults');
+            const resultCount = document.getElementById('resultCount');
+            const totalCount = document.getElementById('totalCount');
+            
+            let grupoCards = Array.from(document.querySelectorAll('.grupo-card'));
+            const totalGrupos = grupoCards.length;
+
+            function applyFiltersAndSort() {
+                const searchTerm = searchInput.value.toLowerCase();
+                const sortValue = sortSelect.value;
+                
+                // Filtrar por búsqueda
+                let filteredCards = grupoCards.filter(card => {
+                    const nombre = card.dataset.nombre;
+                    
+                    // Búsqueda por nombre
+                    if (searchTerm && !nombre.includes(searchTerm)) {
+                        return false;
+                    }
+                    
+                    return true;
+                });
+
+                // Ordenar
+                filteredCards.sort((a, b) => {
+                    switch(sortValue) {
+                        case 'nombre-asc':
+                            return a.dataset.nombre.localeCompare(b.dataset.nombre);
+                        case 'nombre-desc':
+                            return b.dataset.nombre.localeCompare(a.dataset.nombre);
+                        case 'clientes-asc':
+                            return parseInt(a.dataset.clientes) - parseInt(b.dataset.clientes);
+                        default:
+                            return 0;
+                    }
+                });
+
+                // Mostrar/ocultar tarjetas
+                grupoCards.forEach(card => card.style.display = 'none');
+                filteredCards.forEach(card => {
+                    card.style.display = 'block';
+                    gruposGrid.appendChild(card);
+                });
+
+                // Actualizar contador
+                resultCount.textContent = filteredCards.length;
+                
+                // Mostrar mensaje si no hay resultados
+                if (filteredCards.length === 0) {
+                    noResults.style.display = 'block';
+                    gruposGrid.style.display = 'none';
+                } else {
+                    noResults.style.display = 'none';
+                    gruposGrid.style.display = 'grid';
+                }
+            }
+
+            // Event listeners
+            searchInput.addEventListener('input', applyFiltersAndSort);
+            sortSelect.addEventListener('change', applyFiltersAndSort);
+
+            clearFiltersBtn.addEventListener('click', function() {
+                searchInput.value = '';
+                sortSelect.value = 'nombre-asc';
+                applyFiltersAndSort();
+            });
+
+            // Inicializar contador total
+            totalCount.textContent = totalGrupos;
+        });
+    </script>
 {% endblock %}

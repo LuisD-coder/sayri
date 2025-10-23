@@ -132,7 +132,7 @@ def asignar_prestamos_individuales(prestamo_grupal_id):
                     cliente_id=cliente_id,
                     prestamo_individual_id=nuevo_prestamo_individual.id,  
                     monto_pendiente=0,
-                    monto_pagado=monto_pagado,
+                    #monto_pagado=monto_pagado,
                     estado="Pendiente",
                     fecha_pago=fecha_pago  
                 )

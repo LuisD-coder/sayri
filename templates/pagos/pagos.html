@@ -39,10 +39,12 @@
                     </div>
                     <div class="card-body p-0">
                         <div class="row bg-light py-2 px-3 fw-bold border-bottom d-none d-md-flex">
-                            <div class="col-md-3">Cliente</div>
-                            <div class="col-md-2 text-center">Fecha de Pago</div>
-                            <div class="col-md-2 text-center">Cuota</div>
-                            <div class="col-md-3 text-center">Nuevo Abono</div>
+                            <div class="col-md-2">Cliente</div>
+                            <div class="col-md-1 text-center">Fecha de Pago</div>
+                            <div class="col-md-1 text-center">Cuota</div>
+                            <div class="col-md-1 text-center">Atraso</div>
+                            <div class="col-md-1 text-center">Mora</div>
+                            <div class="col-md-4 text-center">Nuevo Abono</div>
                             <div class="col-md-2 text-center">Pago Completo</div>
                         </div>
 
@@ -59,11 +61,11 @@
                             {% endif %}
 
                             <div class="row align-items-center py-2 px-3 mb-3 border-bottom-dashed {{ row_class }}">
-                                <div class="col-md-3 col-12 mb-2 mb-md-0">
+                                <div class="col-md-2 col-12 mb-2 mb-md-0">
                                     <strong class="d-md-none">Cliente: </strong>{{ prestamo.cliente.nombre }} {{ prestamo.cliente.apellido }}
                                     <input type="hidden" name="prestamo_individual_id_{{ prestamo.id }}" value="{{ prestamo.id }}">
                                 </div>
-                                <div class="col-md-2 col-6 mb-2 mb-md-0 text-md-center">
+                                <div class="col-md-1 col-6 mb-2 mb-md-0 text-md-center">
                                     <strong class="d-md-none">Fecha de Pago: </strong>
                                     {% if pago_activo %}
                                         <span class="fw-bold text-info">{{ pago_activo.fecha_pago.strftime('%d/%m/%Y') }}</span>
@@ -73,11 +75,40 @@
                                         <span class="text-secondary">No hay cuotas pendientes</span>
                                     {% endif %}
                                 </div>
-                                <div class="col-md-2 col-6 mb-2 mb-md-0 text-md-center">
+                                <div class="col-md-1 col-6 mb-2 mb-md-0 text-md-center">
                                     <strong class="d-md-none">Cuota: </strong>
                                     <span class="monto-cuota-display fw-bold">S/. {{ '%.2f' % prestamo.obtener_numero_cuota() }}</span>
                                 </div>
-                                <div class="col-md-3 col-6 mb-2 mb-md-0">
+                                <div class="col-md-1 col-6 mb-2 mb-md-0 text-md-center">
+                                    <strong class="d-md-none">Días Atraso: </strong>
+                                    {% if pago_activo %}
+                                        {% set dias_atraso = (current_date - pago_activo.fecha_pago).days %}
+                                        {% if dias_atraso > 0 %}
+                                            <span class="badge bg-danger">{{ dias_atraso }} días</span>
+                                        {% elif dias_atraso == 0 %}
+                                            <span class="badge bg-success">Hoy</span>
+                                        {% else %}
+                                            <span class="badge bg-info">{{ (dias_atraso * -1) }} días restantes</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-1 col-6 mb-2 mb-md-0 text-md-center">
+                                    <strong class="d-md-none">Mora: </strong>
+                                    {% if pago_activo and pago_activo.estado != 'Pagado' %}
+                                        {% set dias_atraso = (current_date - pago_activo.fecha_pago).days %}
+                                        {% if dias_atraso > 0 %}
+                                            {% set mora_calculada = dias_atraso * 7.5 %}
+                                            <span class="badge bg-danger text-white fw-bold">S/ {{ '%.2f' % mora_calculada }}</span>
+                                        {% else %}
+                                            <span class="badge bg-success">S/ 0.00</span>
+                                        {% endif %}
+                                    {% else %}
+                                        <span class="text-muted">S/ 0.00</span>
+                                    {% endif %}
+                                </div>
+                                <div class="col-md-4 col-6 mb-2 mb-md-0">
                                     <div class="row align-items-center">
                                         <div class="col-md-8">
                                             <strong class="d-md-none">Abono: </strong>
@@ -189,7 +220,7 @@
                 
                 // Obtener el monto ya pagado si existe (del badge)
                 const badgePagado = document.querySelector(`input[name="monto_abonado_${prestamoId}"]`)
-                    .closest('.col-md-3')
+                    .closest('.col-md-4')
                     .querySelector('.badge.bg-info');
                 
                 let montoYaPagado = 0;

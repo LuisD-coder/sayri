@@ -2,7 +2,7 @@ from models import db, Rol, Usuario
 from werkzeug.security import generate_password_hash
 
 def inicializar_roles():
-    roles = ["admin", "manager", "agent"]
+    roles = ["admin", "manager", "agent","accounting"]
     for nombre in roles:
         if not Rol.query.filter_by(nombre=nombre).first():
             nuevo_rol = Rol(nombre=nombre)

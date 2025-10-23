@@ -120,13 +120,15 @@
                                                         <i class="bi bi-clock-history"></i>
                                                     </button>
                                                 {% endif %}
-                                                {% if current_user.rol.nombre == 'admin' %}
+                                                {% if current_user.rol.nombre == 'admin' or current_user.rol.nombre == 'accounting'  %}
                                                     <button type="button" class="btn btn-sm btn-outline-primary" onclick="editarPago({{ pago.id }}, '{{ cliente_info.cliente.nombre }} {{ cliente_info.cliente.apellido }}')">
                                                         <i class="bi bi-pencil"></i>
                                                     </button>
+                                                    {% if current_user.rol.nombre == 'admin'%}
                                                     <button type="button" class="btn btn-sm btn-outline-danger" onclick="eliminarPago({{ pago.id }}, '{{ cliente_info.cliente.nombre }} {{ cliente_info.cliente.apellido }}')">
                                                         <i class="bi bi-trash"></i>
                                                     </button>
+                                                    {% endif %}
                                                 {% endif %}
                                             </div>
                                             {% if not pago.tiene_abonos_parciales and current_user.rol.nombre != 'admin' %}
