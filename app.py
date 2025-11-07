@@ -85,7 +85,7 @@ def create_app():
         print("Pagos pagados:", pagos_pagados)
 
         return render_template(
-            'base.html',
+            'index.html',
             pagos_proximos=pagos_proximos,
             pagos_vencidos=pagos_vencidos,
             pagos_pagados=pagos_pagados

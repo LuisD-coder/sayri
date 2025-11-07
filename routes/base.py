@@ -9,5 +9,5 @@ base_bp = Blueprint('base', __name__)
 @login_required
 def home():
     return render_template(
-        'base.html',
+        'index.html',
     )

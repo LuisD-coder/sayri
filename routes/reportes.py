@@ -73,15 +73,24 @@ def pagos_realizados():
 
 
 @reportes_bp.route('/pagos_xfecha')
-@login_required 
+@login_required
 def pagos_xfecha():
+    """
+    Vista de agenda semanal de pagos.
+    Los pagos del domingo se reprograman automáticamente al lunes siguiente.
+    """
+    # Obtener y validar el rango de fecha seleccionado
     rango_fecha_param = request.args.get('rango_fecha')
-    rango_fecha_actual = rango_fecha_param if rango_fecha_param in ["ultima_semana", "semana_2", "semana_3", "semana_4"] else "ultima_semana"
+    rango_fecha_actual = rango_fecha_param if rango_fecha_param in [
+        "ultima_semana", "semana_2", "semana_3", "semana_4"
+    ] else "ultima_semana"
 
-    pagos = [] 
-    fecha_inicio = fecha_fin = None
+    # Calcular fechas de inicio y fin de la semana seleccionada
     fecha_hoy = datetime.today()
-    fecha_lunes_actual = datetime.combine(fecha_hoy - timedelta(days=fecha_hoy.weekday()), datetime.min.time())
+    fecha_lunes_actual = datetime.combine(
+        fecha_hoy - timedelta(days=fecha_hoy.weekday()), 
+        datetime.min.time()
+    )
 
     semanas_offset = {
         "ultima_semana": 0,
@@ -89,13 +98,19 @@ def pagos_xfecha():
         "semana_3": 2,
         "semana_4": 3
     }
+
     fecha_inicio = fecha_lunes_actual + timedelta(weeks=semanas_offset[rango_fecha_actual])
     fecha_fin = fecha_inicio + timedelta(days=6)
 
     fecha_inicio_comparacion = fecha_inicio.date()
     fecha_fin_comparacion = fecha_fin.date()
 
-    # Subconsulta para obtener el ID del prestamo_grupal más reciente por grupo
+    # IMPORTANTE: Incluir el domingo anterior en la consulta
+    # Esto permite capturar pagos del domingo que se reprograman al lunes de esta semana
+    fecha_inicio_query = (fecha_inicio - timedelta(days=1)).date()
+
+    # === CONSULTA DE PRÉSTAMOS GRUPALES MÁS RECIENTES ===
+    # Subconsulta para obtener la fecha de desembolso más reciente por grupo
     subq = db.session.query(
         PrestamoGrupal.grupo_id,
         db.func.max(PrestamoGrupal.fecha_desembolso).label('fecha_max')
@@ -105,35 +120,102 @@ def pagos_xfecha():
 
     prestamos_grupales_ids = db.session.query(pg_alias.id).join(
         subq,
-        (pg_alias.grupo_id == subq.c.grupo_id) &
+        (pg_alias.grupo_id == subq.c.grupo_id) & 
         (pg_alias.fecha_desembolso == subq.c.fecha_max)
     ).all()
 
     ids_filtrados = [x[0] for x in prestamos_grupales_ids]
 
-
-    # Consulta final usando PrestamoIndividual.prestamo_grupal_id
-    query = Pago.query \
-        .join(Pago.prestamo_individual) \
-        .join(Pago.cliente) \
-        .filter(
-            PrestamoIndividual.prestamo_grupal_id.in_(ids_filtrados),
-            db.func.DATE(Pago.fecha_pago) >= fecha_inicio_comparacion,
-            db.func.DATE(Pago.fecha_pago) <= fecha_fin_comparacion
-        ) \
-        .order_by(
-            Cliente.nombre,
-            Pago.fecha_pago
+    # Si no hay préstamos grupales activos, retornar vista vacía
+    if not ids_filtrados:
+        return render_template(
+            'reportes/pagos_xfecha.html',
+            pagos_organizados={},
+            fecha_inicio=fecha_inicio,
+            timedelta=timedelta,
+            rango_fecha_seleccionado_backend=rango_fecha_actual
         )
 
-    pagos = query.all()
+    # === CONSULTA DE PAGOS CON EAGER LOADING ===
+    from sqlalchemy.orm import joinedload
 
-    return render_template('reportes/pagos_xfecha.html', 
-                           pagos=pagos, 
-                           fecha_inicio=fecha_inicio, 
-                           timedelta=timedelta,
-                           rango_fecha_seleccionado_backend=rango_fecha_actual)
-                           
+    pagos = (
+        Pago.query
+        .options(
+            joinedload(Pago.cliente),
+            joinedload(Pago.prestamo_individual)
+                .joinedload(PrestamoIndividual.prestamo_grupal)
+                .joinedload(PrestamoGrupal.grupo)
+        )
+        .join(Pago.prestamo_individual)
+        .join(Pago.cliente)
+        .filter(
+            PrestamoIndividual.prestamo_grupal_id.in_(ids_filtrados),
+            # Incluye desde el domingo anterior hasta el sábado de esta semana
+            db.func.DATE(Pago.fecha_pago) >= fecha_inicio_query,
+            db.func.DATE(Pago.fecha_pago) <= fecha_fin_comparacion
+        )
+        .order_by(Pago.fecha_pago, Cliente.nombre)
+        .all()
+    )
+
+    # === ORGANIZACIÓN DE PAGOS POR FECHA Y GRUPO ===
+    # Inicializar estructura para los 7 días de la semana (Lunes a Domingo)
+    pagos_organizados = {}
+    for i in range(7):
+        fecha_dia = (fecha_inicio + timedelta(days=i)).date()
+        pagos_organizados[fecha_dia] = {}
+
+    # Procesar cada pago y aplicar regla de reprogramación de domingos
+    for pago in pagos:
+        # Normalizar fechas a date() para evitar problemas con datetime
+        fecha_pago_original = pago.fecha_pago
+        if isinstance(fecha_pago_original, datetime):
+            fecha_pago_original = fecha_pago_original.date()
+        
+        fecha_pago = fecha_pago_original
+        grupo_nombre = pago.prestamo_individual.prestamo_grupal.grupo.nombre
+        es_reprogramado = False
+
+        # REGLA DE REPROGRAMACIÓN: Domingo → Lunes siguiente
+        # weekday(): 0=Lunes, 1=Martes, ..., 6=Domingo
+        if fecha_pago.weekday() == 6:  # Domingo
+            fecha_pago_reprogramada = fecha_pago + timedelta(days=1)
+            es_reprogramado = True
+
+            # Solo mostrar si el lunes reprogramado está dentro de esta semana
+            if fecha_inicio_comparacion <= fecha_pago_reprogramada <= fecha_fin_comparacion:
+                fecha_pago = fecha_pago_reprogramada
+            else:
+                # El lunes reprogramado está fuera de esta semana, no lo mostramos aquí
+                continue
+
+        # Verificar que la fecha procesada esté en el diccionario
+        # (debería estarlo siempre si está en el rango de 7 días)
+        if fecha_pago not in pagos_organizados:
+            # Por seguridad, inicializar si no existe (caso edge improbable)
+            pagos_organizados[fecha_pago] = {}
+
+        # Inicializar lista de pagos para este grupo si no existe
+        if grupo_nombre not in pagos_organizados[fecha_pago]:
+            pagos_organizados[fecha_pago][grupo_nombre] = []
+
+        # Agregar pago al diccionario con metadatos
+        pagos_organizados[fecha_pago][grupo_nombre].append({
+            'pago': pago,
+            'cuota': pago.prestamo_individual.obtener_numero_cuota(),
+            'reprogramado': es_reprogramado,
+            'fecha_original': fecha_pago_original if es_reprogramado else None
+        })
+
+    return render_template(
+        'reportes/pagos_xfecha.html',
+        pagos_organizados=pagos_organizados,
+        fecha_inicio=fecha_inicio,
+        timedelta=timedelta,
+        rango_fecha_seleccionado_backend=rango_fecha_actual
+    )
+
                            
 
 

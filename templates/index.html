@@ -1,0 +1,236 @@
+{% extends "base.html" %}
+
+{% block title %}Inicio - Sistema Sayri{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    
+    <!-- Sección de novedades -->
+    <div class="card shadow-lg border-0 mb-5">
+        <div class="card-header bg-primary text-white">
+            <h3 class="mb-0">
+                <i class="bi bi-star-fill"></i> Últimas Actualizaciones del Sistema
+            </h3>
+        </div>
+        <div class="card-body">
+            <!-- Actualización 1: Reprogramación de Domingos -->
+            <div class="update-item">
+                <div class="update-header">
+                    <span class="badge bg-danger">Nuevo</span>
+                    <h5 class="d-inline ms-2">Reprogramación Automática de Pagos del Domingo</h5>
+                    <span class="text-muted float-end">Nov 2025</span>
+                </div>
+                <div class="update-content">
+                    <p class="mb-2"><strong>¿Qué cambió?</strong></p>
+                    <ul>
+                        <li>Los pagos programados para <strong>domingo se reprograman automáticamente al lunes siguiente</strong></li>
+                        <li>En la agenda semanal, el domingo aparecerá vacío si hay pagos programados ese día</li>
+                        <li>Al seleccionar la siguiente semana, verás los pagos reprogramados en el lunes con la etiqueta <span class="badge bg-warning text-dark">REPROG.</span></li>
+                        <li>Se muestra la fecha original del domingo para tener trazabilidad completa</li>
+                        <li>Los pagos reprogramados tienen fondo amarillo para identificarlos fácilmente</li>
+                    </ul>
+                    <div class="alert alert-warning mb-0">
+                        <i class="bi bi-calendar-event"></i> <strong>Ejemplo:</strong> Si un pago estaba programado para el domingo 23-11-2025, automáticamente aparecerá en el lunes 24-11-2025 (Semana 4) con la anotación "📆 Original: 23-11-2025"
+                    </div>
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <!-- Actualización 2: Optimización de Agenda Semanal -->
+            <div class="update-item">
+                <div class="update-header">
+                    <span class="badge bg-success">Mejorado</span>
+                    <h5 class="d-inline ms-2">Agenda Semanal Optimizada</h5>
+                    <span class="text-muted float-end">Nov 2025</span>
+                </div>
+                <div class="update-content">
+                    <p class="mb-2"><strong>¿Qué cambió?</strong></p>
+                    <ul>
+                        <li>Los pagos ahora se organizan en el servidor antes de mostrarlos</li>
+                        <li>Carga mucho más rápida de la agenda, especialmente con muchos grupos</li>
+                        <li>Los pagos se agrupan automáticamente por grupo y fecha</li>
+                        <li>Se incluyen solo los préstamos grupales más recientes de cada grupo</li>
+                        <li>Mejor manejo de fechas para evitar errores de visualización</li>
+                    </ul>
+                    <div class="alert alert-success mb-0">
+                        <i class="bi bi-speedometer2"></i> <strong>Ventaja:</strong> La agenda ahora carga hasta 70% más rápido cuando tienes muchos grupos activos.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Accesos rápidos -->
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-0 quick-access-card">
+                <div class="card-body text-center">
+                    <div class="icon-circle bg-primary mb-3">
+                        <i class="bi bi-cash-stack text-white"></i>
+                    </div>
+                    <h5 class="card-title">Gestión de Pagos</h5>
+                    <p class="card-text text-muted">Registra pagos y abonos de los clientes</p>
+                    <a href="{{ url_for('pagos.lista_pagos') }}" class="btn btn-primary">Ir a Pagos</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-0 quick-access-card">
+                <div class="card-body text-center">
+                    <div class="icon-circle bg-success mb-3">
+                        <i class="bi bi-people-fill text-white"></i>
+                    </div>
+                    <h5 class="card-title">Grupos</h5>
+                    <p class="card-text text-muted">Administra grupos y préstamos grupales</p>
+                    <a href="{{ url_for('grupos.lista_grupos') }}" class="btn btn-success">Ver Grupos</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-0 quick-access-card">
+                <div class="card-body text-center">
+                    <div class="icon-circle bg-warning mb-3">
+                        <i class="bi bi-calendar-week text-white"></i>
+                    </div>
+                    <h5 class="card-title">Agenda Semanal</h5>
+                    <p class="card-text text-muted">Consulta pagos programados por semana</p>
+                    <a href="{{ url_for('reportes.pagos_xfecha') }}" class="btn btn-warning text-white">Ver Agenda</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer informativo -->
+    <div class="text-center mt-5 pt-4 border-top">
+        <p class="text-muted mb-1">
+            <i class="bi bi-info-circle"></i> ¿Necesitas ayuda? Contacta al administrador del sistema
+        </p>
+        <small class="text-muted">Sistema Sayri v4.1 - Gestión de Préstamos Grupales</small>
+    </div>
+</div>
+
+<style>
+    .welcome-section {
+        padding: 50px 20px;
+        background: white;
+        border-radius: 0;
+        border-bottom: 3px solid #0d6efd;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        margin-bottom: 40px;
+    }
+
+    .welcome-section h1 {
+        color: #212529;
+        font-weight: 700;
+        letter-spacing: -1px;
+    }
+
+    .welcome-section .lead {
+        color: #6c757d;
+        font-size: 1.1rem;
+        font-weight: 400;
+        margin-bottom: 20px;
+    }
+
+    .welcome-divider {
+        width: 80px;
+        height: 4px;
+        background: linear-gradient(90deg, #0d6efd 0%, #0dcaf0 100%);
+        margin: 0 auto;
+        border-radius: 2px;
+    }
+
+    .update-item {
+        margin-bottom: 20px;
+    }
+
+    .update-header {
+        margin-bottom: 15px;
+    }
+
+    .update-header h5 {
+        color: #2c3e50;
+        margin-bottom: 0;
+    }
+
+    .update-content ul {
+        margin-bottom: 15px;
+    }
+
+    .update-content li {
+        margin-bottom: 8px;
+        line-height: 1.6;
+    }
+
+    .badge {
+        padding: 6px 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .quick-access-card {
+        transition: transform 0.3s, box-shadow 0.3s;
+        border-radius: 15px;
+    }
+
+    .quick-access-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+    }
+
+    .icon-circle {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto;
+    }
+
+    .icon-circle i {
+        font-size: 2rem;
+    }
+
+    .alert {
+        border-left: 4px solid;
+        border-radius: 8px;
+    }
+
+    .alert-info {
+        border-left-color: #0dcaf0;
+        background-color: #d1ecf1;
+    }
+
+    .alert-success {
+        border-left-color: #198754;
+        background-color: #d1e7dd;
+    }
+
+    .alert-warning {
+        border-left-color: #ffc107;
+        background-color: #fff3cd;
+    }
+
+    .alert-primary {
+        border-left-color: #0d6efd;
+        background-color: #cfe2ff;
+    }
+
+    .card {
+        border-radius: 15px;
+    }
+
+    .card-header {
+        border-radius: 15px 15px 0 0 !important;
+        padding: 20px;
+    }
+
+    hr {
+        opacity: 0.2;
+    }
+</style>
+{% endblock %}

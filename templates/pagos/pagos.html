@@ -8,22 +8,15 @@
 
     <div class="card shadow-lg border-0 mb-4">
         <div class="card-body">
-            <form method="GET" action="{{ url_for('pagos.lista_pagos') }}">
-                <div class="row align-items-center">
-                    <div class="col-md-8">
-                        <label for="grupo_id" class="form-label fw-semibold">Seleccionar Grupo:</label>
-                        <select name="grupo_id" id="grupo_id" class="form-select border-primary" required>
-                            <option value="">Selecciona un grupo</option>
-                            {% for grupo in grupos %}
-                                <option value="{{ grupo.id }}" {% if grupo.id == selected_grupo.id %}selected{% endif %}>{{ grupo.nombre }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-md-4 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary w-100 shadow">Ver Préstamos</button>
-                    </div>
-                </div>
-            </form>
+            <label for="searchGrupo" class="form-label fw-semibold">Buscar Grupo:</label>
+            <div class="autocomplete-wrapper">
+                <input type="text" 
+                       id="searchGrupo" 
+                       class="form-control form-control-lg" 
+                       placeholder="🔍 Escribe el nombre del grupo..."
+                       autocomplete="off">
+                <div id="autocompleteList" class="autocomplete-list"></div>
+            </div>
         </div>
     </div>
 
@@ -173,18 +166,181 @@
 
 <style>
     .pago-incompleto {
-        background-color: #fff3cd !important; /* Color de fondo amarillo claro */
-        border: 2px solid #ffc107; /* Borde amarillo más visible */
+        background-color: #fff3cd !important;
+        border: 2px solid #ffc107;
         border-radius: 0.5rem;
     }
     .pago-atrasado {
-        background-color: #f8d7da !important; /* Color de fondo rojo claro */
-        border: 2px solid #dc3545; /* Borde rojo más visible */
+        background-color: #f8d7da !important;
+        border: 2px solid #dc3545;
         border-radius: 0.5rem;
+    }
+    
+    /* Estilos del autocompletado */
+    .autocomplete-wrapper {
+        position: relative;
+    }
+    
+    .autocomplete-list {
+        position: absolute;
+        width: 100%;
+        max-height: 300px;
+        overflow-y: auto;
+        background: white;
+        border: 1px solid #ced4da;
+        border-radius: 0 0 8px 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 1000;
+        display: none;
+    }
+    
+    .autocomplete-item {
+        padding: 12px 16px;
+        cursor: pointer;
+        border-bottom: 1px solid #f0f0f0;
+        transition: background-color 0.2s;
+    }
+    
+    .autocomplete-item:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .autocomplete-item:last-child {
+        border-bottom: none;
+    }
+    
+    .autocomplete-item-title {
+        font-weight: 600;
+        color: #212529;
+        margin-bottom: 4px;
+    }
+    
+    .autocomplete-item-info {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    
+    .autocomplete-no-results {
+        padding: 16px;
+        text-align: center;
+        color: #6c757d;
+        font-style: italic;
+    }
+    
+    #searchGrupo:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
     }
 </style>
 
 <script>
+    // ==================== AUTOCOMPLETADO DE GRUPOS ====================
+    const grupos = [
+        {% for grupo in grupos %}
+        {
+            id: {{ grupo.id }},
+            nombre: "{{ grupo.nombre }}",
+            clientes: {{ grupo.clientes|length }},
+            prestamos: {{ grupo.prestamos_grupales|length }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    const searchInput = document.getElementById('searchGrupo');
+    const autocompleteList = document.getElementById('autocompleteList');
+
+    function mostrarSugerencias(term) {
+        const filteredGrupos = grupos.filter(grupo => 
+            grupo.nombre.toLowerCase().includes(term.toLowerCase())
+        );
+
+        if (term.length === 0) {
+            autocompleteList.style.display = 'none';
+            return;
+        }
+
+        if (filteredGrupos.length === 0) {
+            autocompleteList.innerHTML = '<div class="autocomplete-no-results">No se encontraron grupos</div>';
+            autocompleteList.style.display = 'block';
+            return;
+        }
+
+        autocompleteList.innerHTML = filteredGrupos.map(grupo => `
+            <div class="autocomplete-item" data-grupo-id="${grupo.id}">
+                <div class="autocomplete-item-title">${grupo.nombre}</div>
+                <div class="autocomplete-item-info">
+                    ${grupo.clientes} cliente${grupo.clientes !== 1 ? 's' : ''} • 
+                    ${grupo.prestamos} préstamo${grupo.prestamos !== 1 ? 's' : ''}
+                </div>
+            </div>
+        `).join('');
+
+        autocompleteList.style.display = 'block';
+
+        // Event listeners para los items
+        document.querySelectorAll('.autocomplete-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const grupoId = this.dataset.grupoId;
+                window.location.href = `{{ url_for('pagos.lista_pagos') }}?grupo_id=${grupoId}`;
+            });
+        });
+    }
+
+    searchInput.addEventListener('input', function() {
+        mostrarSugerencias(this.value);
+    });
+
+    searchInput.addEventListener('focus', function() {
+        if (this.value.length > 0) {
+            mostrarSugerencias(this.value);
+        }
+    });
+
+    // Cerrar el autocompletado al hacer click fuera
+    document.addEventListener('click', function(e) {
+        if (!searchInput.contains(e.target) && !autocompleteList.contains(e.target)) {
+            autocompleteList.style.display = 'none';
+        }
+    });
+
+    // Navegación con teclado
+    let currentFocus = -1;
+    searchInput.addEventListener('keydown', function(e) {
+        const items = autocompleteList.querySelectorAll('.autocomplete-item');
+        
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            currentFocus++;
+            addActive(items);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            currentFocus--;
+            addActive(items);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (currentFocus > -1 && items[currentFocus]) {
+                items[currentFocus].click();
+            }
+        }
+    });
+
+    function addActive(items) {
+        if (!items) return false;
+        removeActive(items);
+        if (currentFocus >= items.length) currentFocus = 0;
+        if (currentFocus < 0) currentFocus = items.length - 1;
+        items[currentFocus].classList.add('active');
+        items[currentFocus].style.backgroundColor = '#e9ecef';
+    }
+
+    function removeActive(items) {
+        items.forEach(item => {
+            item.classList.remove('active');
+            item.style.backgroundColor = '';
+        });
+    }
+
+    // ==================== LÓGICA DE PAGOS ORIGINAL ====================
     document.addEventListener("DOMContentLoaded", function() {
         const pagosForm = document.getElementById('pagos-form');
         const montoAbonadoInputs = pagosForm.querySelectorAll('.monto-abonado:not([disabled])');

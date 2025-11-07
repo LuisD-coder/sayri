@@ -38,6 +38,31 @@
         border-bottom: 1px solid #eee; 
     }
 
+    /* Estilo para pagos reprogramados */
+    .pago-reprogramado {
+        background-color: #fff3cd;
+        border-left: 3px solid #ffc107;
+        padding: 0.3rem 0.5rem;
+        margin-bottom: 0.5rem;
+        border-radius: 4px;
+    }
+
+    .badge-reprogramado {
+        background-color: #ffc107;
+        color: #000;
+        font-size: 0.7em;
+        padding: 2px 6px;
+        border-radius: 3px;
+        margin-left: 5px;
+        font-weight: bold;
+    }
+
+    .fecha-original {
+        font-size: 0.8em;
+        color: #6c757d;
+        font-style: italic;
+    }
+
     /* Media query para pantallas más pequeñas. */
     @media (max-width: 768px) {
         #reporteTabla table {
@@ -60,14 +85,14 @@
 
     /* Clase optimizada para PDF. */
     .pdf-optimize {
-        font-size: 0.7em; /* Ya tienes esto, ayuda a reducir el tamaño del texto */
+        font-size: 0.7em;
     }
     .pdf-optimize th,
     .pdf-optimize td {
-        padding: 3px; /* Ya tienes esto, ayuda a reducir el espacio */
+        padding: 3px;
     }
     .pdf-optimize td p {
-        margin-bottom: 0.25rem; /* Ya tienes esto */
+        margin-bottom: 0.25rem;
     }
 
     /* Regla para intentar que no rompa los bloques de detalles. */
@@ -92,7 +117,7 @@
                 </select>
             </div>
         </div>
-        </form>
+    </form>
 
     {% if fecha_inicio %} 
 
@@ -101,13 +126,17 @@
         <button class="btn btn-info" id="toggleDetallesBtn">Ocultar Detalles</button>
     </div>
 
+    <div class="alert alert-warning" role="alert">
+        <strong>ℹ️ Nota:</strong> Los pagos programados para domingo se reprograman automáticamente al lunes siguiente y aparecerán en la agenda de la siguiente semana con la etiqueta <span class="badge-reprogramado">REPROG.</span>
+    </div>
+
     <div id="reporteTabla" {% if fecha_inicio %}data-start-date="{{ fecha_inicio.isoformat() }}"{% endif %}>
-        {% if pagos %} {# Solo mostramos la tabla si hay un objeto de pagos (puede estar vacío) #}
+        {% if pagos_organizados %}
         <table class="table table-bordered mt-4">
             <thead>
                 <tr>
                     {% for dia in range(7) %}
-                    {% set fecha_dia = fecha_inicio + timedelta(days=dia) %}
+                    {% set fecha_dia = (fecha_inicio + timedelta(days=dia)).date() %}
                     <th>{{ ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"][dia] }} <br>
                         <small>📅 {{ fecha_dia.strftime('%d-%m-%Y') }}</small>
                     </th>
@@ -117,27 +146,58 @@
             <tbody>
                 <tr>
                     {% for dia in range(7) %}
-                    {% set fecha_dia = fecha_inicio + timedelta(days=dia) %}
+                    {% set fecha_dia = (fecha_inicio + timedelta(days=dia)).date() %}
                     <td>
-                        {% for agrupacion in pagos | groupby(attribute='prestamo_individual.prestamo_grupal.grupo.nombre') %}
-                            {% set grupo_nombre = agrupacion.grouper %}
-                            {% set pagos_list = agrupacion.list %}
-                            {# Aseguro que la comparación de fechas sea solo con la parte de la fecha, no con la hora. #}
-                            {% set pagos_filtrados = pagos_list | selectattr("fecha_pago", "equalto", fecha_dia.date()) | list %}
-
-                            {% if pagos_filtrados %}
-                            <strong>➡︎ {{ grupo_nombre }}</strong>             
-                            {% for pago in pagos_filtrados %}
-                            <div class="detalle-pago">
-                                <p>{{ pago.cliente.nombre }} {{ pago.cliente.apellido }} <br>
-                                    C: S/. {{ pago.prestamo_individual.obtener_numero_cuota() }}</p>
-                            </div>
+                        {% if fecha_dia in pagos_organizados and pagos_organizados[fecha_dia] %}
+                            {% for grupo_nombre, pagos_grupo in pagos_organizados[fecha_dia].items() %}
+                                <strong>➡︎ {{ grupo_nombre }}</strong>
+                                {% for pago_info in pagos_grupo %}
+                                <div class="detalle-pago {% if pago_info.reprogramado %}pago-reprogramado{% endif %}">
+                                    <p>
+                                        {{ pago_info.pago.cliente.nombre }} {{ pago_info.pago.cliente.apellido }}
+                                        {% if pago_info.reprogramado %}
+                                        <span class="badge-reprogramado">REPROG.</span>
+                                        {% endif %}
+                                        <br>
+                                        C: S/. {{ pago_info.cuota }}
+                                        {% if pago_info.reprogramado %}
+                                        <br>
+                                        <span class="fecha-original">📆 Original: {{ pago_info.fecha_original.strftime('%d-%m-%Y') }}</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                                {% endfor %}
                             {% endfor %}
-                            {% endif %}
-                        {% endfor %}
+                        {% endif %}
                     </td>
                     {% endfor %}
                 </tr>
+                {# Fila extra solo si hay pagos del domingo reprogramados al lunes siguiente #}
+                {% set lunes_extra = (fecha_inicio + timedelta(days=7)).date() %}
+                {% if lunes_extra in pagos_organizados and pagos_organizados[lunes_extra] %}
+                <tr>
+                    <td colspan="7" class="table-warning">
+                        <strong>⚠️ Lunes {{ lunes_extra.strftime('%d-%m-%Y') }} (Pagos reprogramados del domingo anterior):</strong>
+                        <div class="mt-2">
+                            {% for grupo_nombre, pagos_grupo in pagos_organizados[lunes_extra].items() %}
+                                <strong>➡︎ {{ grupo_nombre }}</strong>
+                                {% for pago_info in pagos_grupo %}
+                                <div class="detalle-pago pago-reprogramado">
+                                    <p>
+                                        {{ pago_info.pago.cliente.nombre }} {{ pago_info.pago.cliente.apellido }}
+                                        <span class="badge-reprogramado">REPROG.</span>
+                                        <br>
+                                        C: S/. {{ pago_info.cuota }}
+                                        <br>
+                                        <span class="fecha-original">📆 Original: {{ pago_info.fecha_original.strftime('%d-%m-%Y') }}</span>
+                                    </p>
+                                </div>
+                                {% endfor %}
+                            {% endfor %}
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
             </tbody>
         </table>
         {% else %}
@@ -157,15 +217,6 @@
     function getQueryParam(name) {
         const urlParams = new URLSearchParams(window.location.search);
         return urlParams.get(name);
-    }
-
-    // Función para calcular el número de semana (ISO 8601). (Aunque no se usa directamente en el nombre del PDF ahora)
-    function getWeekNumber(d) {
-        d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-        d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
-        var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-        var weekNo = Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
-        return weekNo;
     }
 
     // Mi función para descargar PDF.
@@ -196,32 +247,26 @@
             } else if (rangoFecha === 'semana_4') {
                 numeroSemanaDisplay = 'semana4';
             } else {
-                // Fallback si por alguna razón no se obtiene el rango del URL,
-                // aunque el backend ya lo manejará por defecto.
                 numeroSemanaDisplay = 'semana_desconocida'; 
             }
 
             filename = `agenda_${startDay}al${endDay}_${numeroSemanaDisplay}.pdf`;
         }
         
-        element.classList.add('pdf-optimize'); // Aplica la clase antes de la conversión
+        element.classList.add('pdf-optimize');
 
         const options = {
-            margin:       5, // Margen en mm (5mm en cada lado)
+            margin:       5,
             filename:     filename, 
             image:        { type: 'jpeg', quality: 0.98 },
             html2canvas:  { 
-                scale: 0.75, // Ajusta esta escala. Un valor de 0.75 o 0.8 suele funcionar bien.
-                            // Si sigue cortándose, bájalo más (ej: 0.7). Si queda mucho espacio, súbelo (ej: 0.8).
+                scale: 0.75,
                 scrollY: 0, 
-                // Eliminamos windowWidth y windowHeight para que html2canvas calcule mejor el tamaño.
             },
-            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' } // A4 apaisado
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'landscape' }
         };
 
-        // Usa html2pdf para generar y guardar el PDF
         html2pdf().set(options).from(element).save().then(function() {
-            // Remueve la clase después de que la descarga haya terminado
             element.classList.remove('pdf-optimize');
         });
     }
@@ -249,7 +294,7 @@
 
         if (rangoFechaSelect && filtroForm) {
             rangoFechaSelect.addEventListener('change', function() {
-                filtroForm.submit(); // Envía el formulario automáticamente.
+                filtroForm.submit();
             });
         }
     });
