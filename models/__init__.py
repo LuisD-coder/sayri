@@ -11,3 +11,4 @@ from models.contrato import Contrato
 from models.rol import Rol
 from models.usuario import Usuario
 from models.pago_parcial import PagoParcial
+from models.foto_cliente import FotoCliente

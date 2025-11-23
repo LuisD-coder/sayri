@@ -8,113 +8,175 @@
 
     <!-- Botón para nuevo préstamo -->
     <div class="text-center mb-4">
-        <a href="{{ url_for('prestamos_grupales.nuevo_prestamo_grupal') }}" class="btn btn-success">+ Nuevo Préstamo</a>
+        <a href="{{ url_for('prestamos_grupales.nuevo_prestamo_grupal') }}" class="btn btn-success">
+            + Nuevo Préstamo
+        </a>
     </div>
 
-    <!-- Formulario para seleccionar grupo -->
-    <form method="GET" action="{{ url_for('prestamos_grupales.lista_prestamos_grupales') }}" class="mb-4">
-        <div class="row">
-            <div class="col-md-6">
-                <label for="grupo_id" class="form-label">Selecciona un Grupo:</label>
-                <select name="grupo_id" id="grupo_id" class="form-select" required>
-                    <option value="" disabled selected>Elige un grupo</option>
-                    {% for grupo in grupos %}
-                        <option value="{{ grupo.id }}" {% if grupo.id == selected_grupo_id %}selected{% endif %}>{{ grupo.nombre }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            <div class="col-md-6 d-flex align-items-end">
-                <button type="submit" class="btn btn-primary w-100">Ver Préstamos</button>
-            </div>
-        </div>
+    <!-- 🔍 Buscador dinámico -->
+    <div class="mb-4">
+        <label for="buscador_grupos" class="form-label">Buscar grupo:</label>
+        <input type="text" id="buscador_grupos" class="form-control" placeholder="Escribe el nombre del grupo...">
+        <div id="resultados_grupos" class="list-group mt-2" style="display:none;"></div>
+    </div>
+
+    <!-- Formulario para selección de grupo -->
+    <form id="form_grupo" method="GET" action="{{ url_for('prestamos_grupales.lista_prestamos_grupales') }}" class="mb-4">
+        <input type="hidden" name="grupo_id" id="grupo_id">
     </form>
 
-    {% if prestamos_grupales %}
-        <div class="row">
-            {% for prestamo in prestamos_grupales %}
-                <div class="col-md-4">
-                    <div class="card shadow-sm mb-4">
-                        <div class="card-body">
-                            <h5 class="card-title text-primary">Préstamo Grupal</h5>
-                            <p class="card-text"><strong>Monto Total:</strong> S/ {{ prestamo.monto_total }}</p>
-                            <p class="card-text"><strong>Fecha de Desembolso:</strong> {{ prestamo.fecha_desembolso.strftime('%d/%m/%Y') }}</p>
-                            
-                            <div class="d-flex flex-wrap gap-2 mt-3">
-                                <a href="{{ url_for('prestamos_grupales.prestamos_individuales', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-eye"></i> Ver P.I.
-                                </a>
-                                <a href="{{ url_for('prestamos_grupales.asignar_prestamos_individuales', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-outline-success">
-                                    <i class="bi bi-plus-circle"></i> Asignar P.I.
-                                </a>
-                                <a href="{{ url_for('prestamos_grupales.generar_contrato', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-outline-warning">
-                                    <i class="bi bi-file-earmark-pdf"></i> Generar Contrato
-                                </a>
-                                <!-- Agregar este botón en la sección de botones existentes -->
-                                <a href="{{ url_for('prestamos_grupales.reporte_pagos', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-outline-info">
-                                    <i class="bi bi-file-earmark-text"></i> Reporte Pagos
-                                </a>
-                            </div>
-                            <!-- Botón para eliminar préstamo grupal -->
-<form method="POST" action="{{ url_for('prestamos_grupales.eliminar_prestamo_grupal', prestamo_grupal_id=prestamo.id) }}" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este préstamo grupal?')">
-    <button type="submit" class="btn btn-sm btn-outline-danger">
-        <i class="bi bi-trash"></i> Eliminar
-    </button>
-</form>
+    {% if selected_grupo %}
+        <h3 class="text-center mb-5">
+            <span class="badge bg-secondary">Grupo seleccionado: {{ selected_grupo.nombre }}</span>
+        </h3>
+    {% endif %}
 
+    {% if prestamos_grupales %}
+        {% set prestamo_reciente = prestamos_grupales[0] %}
+        {% set prestamos_antiguos = prestamos_grupales[1:] %}
+
+        <!-- 💚 Préstamo grupal más reciente -->
+        <div class="row justify-content-center mb-5">
+            <div class="col-md-6">
+                <div class="card border-success shadow-sm mb-4">
+                    <div class="card-header bg-success text-white text-center fw-bold">
+                        Préstamo Grupal Más Reciente
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title text-success text-center">{{ prestamo_reciente.grupo.nombre }}</h5>
+                        <p><strong>Monto Total:</strong> S/ {{ prestamo_reciente.monto_total }}</p>
+                        <p><strong>Fecha de Desembolso:</strong> {{ prestamo_reciente.fecha_desembolso.strftime('%d/%m/%Y') }}</p>
+
+                        <div class="d-flex flex-wrap gap-2 mt-3 justify-content-center">
+                            <a href="{{ url_for('prestamos_grupales.prestamos_individuales', prestamo_grupal_id=prestamo_reciente.id) }}" class="btn btn-sm btn-outline-primary">
+                                <i class="bi bi-eye"></i> Ver P.I.
+                            </a>
+                            <a href="{{ url_for('prestamos_grupales.asignar_prestamos_individuales', prestamo_grupal_id=prestamo_reciente.id) }}" class="btn btn-sm btn-outline-success">
+                                <i class="bi bi-plus-circle"></i> Asignar P.I.
+                            </a>
+                            <a href="{{ url_for('prestamos_grupales.generar_contrato', prestamo_grupal_id=prestamo_reciente.id) }}" class="btn btn-sm btn-outline-warning">
+                                <i class="bi bi-file-earmark-pdf"></i> Contrato
+                            </a>
+                            <a href="{{ url_for('prestamos_grupales.reporte_pagos', prestamo_grupal_id=prestamo_reciente.id) }}" class="btn btn-sm btn-outline-info">
+                                <i class="bi bi-file-earmark-text"></i> Reporte
+                            </a>
                         </div>
+
+                        <form method="POST" action="{{ url_for('prestamos_grupales.eliminar_prestamo_grupal', prestamo_grupal_id=prestamo_reciente.id) }}" onsubmit="return confirm('¿Eliminar este préstamo grupal?')">
+                            <button type="submit" class="btn btn-sm btn-outline-danger mt-3 w-100">
+                                <i class="bi bi-trash"></i> Eliminar
+                            </button>
+                        </form>
                     </div>
                 </div>
-            {% endfor %}
+            </div>
         </div>
-    {% elif selected_grupo_id %}
-        <p class="text-center text-muted">No hay préstamos registrados para este grupo.</p>
+
+        <!-- ❤️ Préstamos anteriores -->
+        {% if prestamos_antiguos %}
+            <h4 class="text-muted mb-3 text-center">Préstamos Anteriores</h4>
+            <div class="row">
+                {% for prestamo in prestamos_antiguos %}
+                    <div class="col-md-4">
+                        <div class="card border-danger shadow-sm mb-4">
+                            <div class="card-header bg-danger text-white text-center fw-bold">
+                                Préstamo Anterior
+                            </div>
+                            <div class="card-body">
+                                <h5 class="card-title text-danger text-center">{{ prestamo.grupo.nombre }}</h5>
+                                <p><strong>Monto Total:</strong> S/ {{ prestamo.monto_total }}</p>
+                                <p><strong>Fecha de Desembolso:</strong> {{ prestamo.fecha_desembolso.strftime('%d/%m/%Y') }}</p>
+
+                                <div class="d-flex flex-wrap gap-2 mt-3 justify-content-center">
+                                    <a href="{{ url_for('prestamos_grupales.prestamos_individuales', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i> Ver P.I.
+                                    </a>
+                                    <a href="{{ url_for('prestamos_grupales.asignar_prestamos_individuales', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-outline-success">
+                                        <i class="bi bi-plus-circle"></i> Asignar P.I.
+                                    </a>
+                                    <a href="{{ url_for('prestamos_grupales.generar_contrato', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-outline-warning">
+                                        <i class="bi bi-file-earmark-pdf"></i> Contrato
+                                    </a>
+                                    <a href="{{ url_for('prestamos_grupales.reporte_pagos', prestamo_grupal_id=prestamo.id) }}" class="btn btn-sm btn-outline-info">
+                                        <i class="bi bi-file-earmark-text"></i> Reporte
+                                    </a>
+                                </div>
+
+                                <form method="POST" action="{{ url_for('prestamos_grupales.eliminar_prestamo_grupal', prestamo_grupal_id=prestamo.id) }}" onsubmit="return confirm('¿Eliminar este préstamo grupal?')">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger mt-3 w-100">
+                                        <i class="bi bi-trash"></i> Eliminar
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% else %}
+        <p class="text-center text-muted">No hay préstamos registrados aún.</p>
     {% endif %}
 </div>
 
+<!-- 🔍 Script buscador dinámico -->
+<script>
+const grupos = [
+    {% for grupo in grupos %}
+        { id: {{ grupo.id }}, nombre: "{{ grupo.nombre }}" },
+    {% endfor %}
+];
+
+const buscador = document.getElementById("buscador_grupos");
+const lista = document.getElementById("resultados_grupos");
+const inputHidden = document.getElementById("grupo_id");
+const form = document.getElementById("form_grupo");
+
+buscador.addEventListener("input", () => {
+    const query = buscador.value.trim().toLowerCase();
+    lista.innerHTML = "";
+    if (!query) {
+        lista.style.display = "none";
+        return;
+    }
+
+    const filtrados = grupos.filter(g => g.nombre.toLowerCase().includes(query));
+    if (filtrados.length > 0) {
+        lista.style.display = "block";
+        filtrados.forEach(g => {
+            const item = document.createElement("a");
+            item.className = "list-group-item list-group-item-action";
+            item.textContent = g.nombre;
+            item.href = "#";
+            item.onclick = e => {
+                e.preventDefault();
+                buscador.value = g.nombre;
+                inputHidden.value = g.id;
+                form.submit();
+            };
+            lista.appendChild(item);
+        });
+    } else {
+        lista.style.display = "none";
+    }
+});
+</script>
+
 <style>
-    .container {
-        max-width: 900px;
-        margin: auto;
-    }
-
-    .card {
-        border-radius: 8px;
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-
-    .card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-    }
-
-    .btn-outline-primary:hover {
-        background-color: #007bff;
-        color: white;
-    }
-
-    .btn-outline-success:hover {
-        background-color: #28a745;
-        color: white;
-    }
-
-    .btn-outline-warning:hover {
-        background-color: #ffc107;
-        color: white;
-    }
-
-    .text-center {
-        text-align: center;
-    }
-
-    .btn-success {
-        font-size: 18px;
-        padding: 12px 20px;
-        font-weight: bold;
-    }
-
-    .gap-2 {
-        gap: 10px;
-    }
+.card {
+    border-radius: 10px;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+#buscador_grupos {
+    font-size: 16px;
+    padding: 10px;
+}
+.badge {
+    font-size: 1.1rem;
+    padding: 10px 15px;
+}
 </style>
-
 {% endblock %}

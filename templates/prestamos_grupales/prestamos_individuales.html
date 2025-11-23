@@ -3,51 +3,677 @@
 {% block title %}Préstamos Individuales{% endblock %}
 
 {% block content %}
-<div class="container">
-    <h2 class="text-center my-4">Préstamos Individuales del Grupo {{ prestamo_grupal.grupo.nombre }}</h2>
+<div class="container py-4">
+    <!-- Encabezado con estilo actual -->
+    <div class="header-card mb-4">
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <h2 class="mb-2">
+                    <i class="bi bi-people-fill me-2"></i>{{ prestamo_grupal.grupo.nombre | upper }}
+                </h2>
+                <p class="text-muted mb-0">
+                    <i class="bi bi-calendar3 me-2"></i>Fecha de desembolso: {{ prestamo_grupal.fecha_desembolso.strftime('%d-%m-%Y') }}
+                </p>
+            </div>
+            <div>
+                <div class="badge-custom">
+                    <i class="bi bi-person-lines-fill me-2"></i>
+                    {{ prestamos_individuales|length }} Cliente(s)
+                </div>
+            </div>
+        </div>
+    </div>
     
     {% if prestamos_individuales %}
-        <div class="table-responsive">
-            <table class="table table-dark table-hover table-bordered">
-                <thead class="table-primary text-dark">
-                    <tr>
-                        <th>Cliente</th>
-                        <th>Monto del Prestamo</th>
-                        <th>DNI</th>
-                        <th>Cuota a Pagar</th> {# Etiqueta mas clara #}
-                        <th>Contrato</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for prestamo in prestamos_individuales %}
-                        <tr>
-                            <td>{{ prestamo.cliente.nombre }} {{ prestamo.cliente.apellido }}</td>
-                            <td>S/ {{ prestamo.monto }}</td>
-                            <td>{{ prestamo.cliente.dni }}</td>
-                            <td>
-                                {# Usamos el metodo obtener_numero_cuota() directamente del objeto prestamo #}
+        <!-- Lista de clientes -->
+        <div class="clientes-list">
+            {% for prestamo in prestamos_individuales %}
+            <div class="cliente-card mb-3">
+                <div class="row align-items-center">
+                    <!-- Fotos del cliente (hasta 3) -->
+                    <div class="col-auto">
+                        <div class="fotos-wrapper">
+                            {% set fotos = prestamo.cliente.fotos if prestamo.cliente.fotos else [] %}
+                            {% if fotos|length > 0 %}
+                            <!-- Carrusel de fotos -->
+                            <div id="carousel-{{ prestamo.cliente.id }}" class="carousel slide foto-carousel" data-bs-ride="false">
+                                <div class="carousel-inner">
+                                    {% for foto in fotos %}
+                                    <div class="carousel-item {% if loop.first %}active{% endif %}">
+                                        <img src="{{ foto.url }}" alt="{{ prestamo.cliente.nombre }}" class="cliente-avatar">
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% if fotos|length > 1 %}
+                                <button class="carousel-control-prev" type="button" data-bs-target="#carousel-{{ prestamo.cliente.id }}" data-bs-slide="prev">
+                                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                </button>
+                                <button class="carousel-control-next" type="button" data-bs-target="#carousel-{{ prestamo.cliente.id }}" data-bs-slide="next">
+                                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                </button>
+                                {% endif %}
+                                <!-- Indicadores de fotos -->
+                                <div class="foto-indicators">
+                                    {% for foto in fotos %}
+                                    <span class="indicator-dot {% if loop.first %}active{% endif %}"></span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% else %}
+                            <!-- Placeholder sin fotos -->
+                            <div class="cliente-avatar-placeholder">
+                                <i class="bi bi-person-circle"></i>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Botón de cámara con contador -->
+                            <button class="camera-btn" data-cliente-id="{{ prestamo.cliente.id }}" data-fotos-actuales="{{ fotos|length }}" title="Gestionar fotos">
+                                <i class="bi bi-camera-fill"></i>
+                                <span class="foto-count">{{ prestamo.cliente.get_num_fotos() }}/3</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Información del cliente -->
+                    <div class="col">
+                        <h5 class="cliente-name mb-2">{{ prestamo.cliente.nombre }} {{ prestamo.cliente.apellido }}</h5>
+                        <div class="cliente-info">
+                            <span class="info-badge">
+                                <i class="bi bi-credit-card-2-front me-1"></i>DNI: {{ prestamo.cliente.dni }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Datos financieros -->
+                    <div class="col-auto text-end">
+                        <div class="financial-info mb-2">
+                            <div class="amount-item mb-2">
+                                <i class="bi bi-cash-stack text-success me-1"></i>
+                                <span class="label">Monto Préstamo:</span>
+                                <strong class="value text-success">S/ {{ prestamo.monto }}</strong>
+                            </div>
+                            <div class="amount-item">
+                                <i class="bi bi-calendar-check text-info me-1"></i>
+                                <span class="label">Cuota a Pagar:</span>
                                 {% set cuota = prestamo.obtener_numero_cuota() %}
                                 {% if cuota is not none %}
-                                    S/ {{ cuota }}
+                                <strong class="value text-info">S/ {{ cuota }}</strong>
                                 {% else %}
-                                    N/A {# O puedes mostrar un mensaje diferente si el monto no tiene una cuota definida #}
+                                <span class="text-muted">N/A</span>
                                 {% endif %}
-                            </td>
-                            <td>
-                                {% set contrato = prestamo.cliente.contratos | selectattr('prestamo_individual_id', 'equalto', prestamo.id) | first %}
-                                {% if contrato %}
-                                    <a href="{{ url_for('prestamos_grupales.descargar_contrato', contrato_id=contrato.id) }}" class="btn btn-success">Descargar Contrato</a>
-                                {% else %}
-                                    <span class="text-muted">Contrato no disponible</span>
-                                {% endif %}
-                            </td>
-                        </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botón de contrato -->
+                    <div class="col-auto">
+                        {% set contrato = prestamo.cliente.contratos | selectattr('prestamo_individual_id', 'equalto', prestamo.id) | first %}
+                        {% if contrato %}
+                        <a href="{{ url_for('prestamos_grupales.descargar_contrato', contrato_id=contrato.id) }}" class="btn btn-primary">
+                            <i class="bi bi-file-earmark-pdf me-2"></i>Descargar Contrato
+                        </a>
+                        {% else %}
+                        <button class="btn btn-outline-secondary" disabled>
+                            <i class="bi bi-file-earmark-x me-2"></i>Sin Contrato
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
         </div>
+
+        <!-- Resumen estadístico -->
+        <div class="summary-card mt-4">
+            <div class="row text-center">
+                <div class="col-md-4">
+                    <div class="stat-item">
+                        <i class="bi bi-cash-coin stat-icon text-success"></i>
+                        <h4 class="stat-value text-success">
+                            S/ {% set total = prestamos_individuales | sum(attribute='monto') %}{{ total }}
+                        </h4>
+                        <p class="stat-label">Monto Total Desembolsado</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-item">
+                        <i class="bi bi-people stat-icon text-primary"></i>
+                        <h4 class="stat-value text-primary">{{ prestamos_individuales|length }}</h4>
+                        <p class="stat-label">Clientes en el Grupo</p>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="stat-item">
+                        <i class="bi bi-calendar2-check stat-icon text-info"></i>
+                        {% set cuotas = [] %}
+                        {% for prestamo in prestamos_individuales %}
+                            {% set cuota = prestamo.obtener_numero_cuota() %}
+                            {% if cuota is not none %}
+                                {% set _ = cuotas.append(cuota) %}
+                            {% endif %}
+                        {% endfor %}
+                        {% set cuota_promedio = (cuotas | sum / cuotas | length) if cuotas else 0 %}
+                        <h4 class="stat-value text-info">S/ {{ "%.2f"|format(cuota_promedio) }}</h4>
+                        <p class="stat-label">Cuota Promedio</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
     {% else %}
-        <p class="text-center">No hay prestamos individuales para este grupo.</p>
+        <div class="empty-state text-center py-5">
+            <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc;"></i>
+            <h4 class="text-muted mt-3">No hay préstamos individuales para este grupo</h4>
+        </div>
     {% endif %}
+
+    <!-- Botón de regreso -->
+    <div class="text-center mt-4">
+        <a href="{{ url_for('prestamos_grupales.lista_prestamos_grupales') }}" class="btn btn-outline-dark">
+            <i class="bi bi-arrow-left me-2"></i>Volver a Préstamos Grupales
+        </a>
+    </div>
 </div>
+
+<!-- Modal para gestionar fotos -->
+<div class="modal fade" id="fotoModal" tabindex="-1" aria-labelledby="fotoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="fotoModalLabel">
+                    <i class="bi bi-images me-2"></i>Gestionar Fotos del Cliente
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="clienteId" name="cliente_id">
+                
+                <!-- Galería de fotos existentes -->
+                <div id="galeria-fotos" class="mb-4">
+                    <h6 class="mb-3">Fotos actuales:</h6>
+                    <div class="row g-3" id="fotos-existentes">
+                        <!-- Las fotos se cargarán dinámicamente aquí -->
+                    </div>
+                </div>
+
+                <!-- Subir nuevas fotos -->
+                <div id="upload-section">
+                    <h6 class="mb-3">Agregar nueva foto:</h6>
+                    <form id="fotoForm" enctype="multipart/form-data">
+                        
+                        <!-- Preview de la nueva foto -->
+                        <div class="foto-preview mb-3">
+                            <img id="previewImg" src="" alt="Preview" style="display:none; max-width: 100%; max-height: 250px; border-radius: 10px;">
+                            <div id="previewPlaceholder" class="text-muted">
+                                <i class="bi bi-image" style="font-size: 3rem;"></i>
+                                <p class="mt-2">Selecciona una imagen</p>
+                            </div>
+                        </div>
+
+                        <div class="d-grid">
+                            <label for="fotoInput" class="btn btn-outline-primary btn-lg">
+                                <i class="bi bi-upload me-2"></i>Seleccionar Imagen
+                            </label>
+                            <input type="file" class="d-none" id="fotoInput" name="foto" accept="image/*">
+                        </div>
+
+                        <small class="text-muted d-block mt-2 text-center">
+                            Formatos: JPG, PNG, JPEG (Máx. 5MB) - Máximo 3 fotos por cliente
+                        </small>
+                    </form>
+                </div>
+
+                <!-- Mensaje cuando se alcanza el límite -->
+                <div id="limite-alcanzado" class="alert alert-warning text-center" style="display:none;">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Límite alcanzado:</strong> Ya tienes 3 fotos. Elimina una para agregar otra.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-primary" id="guardarFoto">
+                    <i class="bi bi-check-circle me-2"></i>Guardar Foto
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    body {
+        background-color: #f0f0f0;
+    }
+
+    .header-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem;
+        border-radius: 10px;
+        color: white;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+
+    .header-card h2 {
+        color: white;
+        font-weight: 700;
+        margin: 0;
+    }
+
+    .badge-custom {
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        padding: 0.75rem 1.5rem;
+        border-radius: 50px;
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: white;
+        border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .cliente-card {
+        background: white;
+        border-radius: 10px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: all 0.3s ease;
+        position: relative;
+    }
+
+    .cliente-card:hover {
+        box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+        transform: translateY(-2px);
+    }
+
+    /* Contenedor de fotos del cliente */
+    .fotos-wrapper {
+        position: relative;
+        width: 100px;
+        height: 100px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    /* Imágenes del carrusel */
+    .foto-carousel img.cliente-avatar {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 3px solid #667eea;
+    }
+
+    /* Placeholder cuando no hay imagen */
+    .cliente-avatar-placeholder {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+        color: white;
+        border: 3px solid #e0e0e0;
+        position: relative;
+    }
+
+    /* Botón de cámara visible y centrado sobre la imagen */
+    .camera-btn {
+        position: absolute;
+        bottom: 4px;
+        right: 4px;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #667eea;
+        color: white;
+        border: 2px solid white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        z-index: 10;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    .camera-btn i {
+        font-size: 1.1rem;
+    }
+
+    .camera-btn:hover {
+        background: #764ba2;
+        transform: scale(1.1);
+    }
+
+    .foto-count {
+        position: absolute;
+        bottom: -10px;
+        right: 0;
+        background: #fff;
+        color: #333;
+        font-size: 0.7rem;
+        border-radius: 8px;
+        padding: 0 4px;
+        border: 1px solid #ccc;
+    }
+
+    /* Galería de imágenes dentro del modal */
+    #fotos-existentes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        justify-content: center;
+    }
+
+    .foto-item {
+        position: relative;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+        transition: transform 0.2s;
+    }
+
+    .foto-item:hover {
+        transform: scale(1.03);
+    }
+
+    .foto-item img {
+        width: 150px;
+        height: 150px;
+        object-fit: cover;
+        border-radius: 10px;
+        display: block;
+    }
+
+    .delete-btn {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        background: rgba(255, 0, 0, 0.8);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background 0.3s;
+    }
+
+    .delete-btn:hover {
+        background: red;
+    }
+
+    /* Texto e información */
+    .cliente-name {
+        color: #2c3e50;
+        font-weight: 600;
+        font-size: 1.2rem;
+        margin: 0;
+    }
+
+    .info-badge {
+        display: inline-block;
+        background: #f8f9fa;
+        padding: 0.4rem 0.8rem;
+        border-radius: 5px;
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+
+    .financial-info {
+        text-align: right;
+    }
+
+    .amount-item {
+        font-size: 0.95rem;
+    }
+
+    .amount-item .label {
+        color: #6c757d;
+        margin-right: 0.5rem;
+    }
+
+    .amount-item .value {
+        font-size: 1.1rem;
+    }
+
+    .summary-card {
+        background: white;
+        border-radius: 10px;
+        padding: 2rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    }
+
+    .stat-item {
+        padding: 1rem;
+    }
+
+    .stat-icon {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+        font-size: 1.8rem;
+        font-weight: 700;
+        margin: 0.5rem 0;
+    }
+
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        margin: 0;
+    }
+
+    .foto-preview {
+        min-height: 300px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 2rem;
+    }
+
+    @media (max-width: 768px) {
+        .cliente-card .row {
+            text-align: center;
+        }
+
+        .cliente-card .col-auto {
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        .financial-info {
+            text-align: center;
+        }
+
+        .foto-item img {
+            width: 100px;
+            height: 100px;
+        }
+    }
+</style>
+
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const fotoModal = new bootstrap.Modal(document.getElementById('fotoModal'));
+        const fotoInput = document.getElementById('fotoInput');
+        const previewImg = document.getElementById('previewImg');
+        const previewPlaceholder = document.getElementById('previewPlaceholder');
+        const clienteIdInput = document.getElementById('clienteId');
+        const fotosExistentesDiv = document.getElementById('fotos-existentes');
+        const uploadSection = document.getElementById('upload-section');
+        const limiteAlcanzado = document.getElementById('limite-alcanzado');
+        const guardarBtn = document.getElementById('guardarFoto');
+
+        let fotosActuales = [];
+
+        // Abrir modal al hacer clic en el botón de cámara
+        document.querySelectorAll('.camera-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const clienteId = this.dataset.clienteId;
+                const numFotos = parseInt(this.dataset.fotosActuales) || 0;
+                
+                clienteIdInput.value = clienteId;
+                cargarFotosExistentes(clienteId);
+                fotoModal.show();
+            });
+        });
+
+        // Cargar fotos existentes del cliente
+        function cargarFotosExistentes(clienteId) {
+            fetch(`/clientes/${clienteId}/fotos`)
+                .then(response => response.json())
+                .then(data => {
+                    fotosActuales = data.fotos || [];
+                    renderizarFotosExistentes();
+                    actualizarEstadoUpload();
+                })
+                .catch(error => {
+                    console.error('Error al cargar fotos:', error);
+                    fotosActuales = [];
+                    renderizarFotosExistentes();
+                });
+        }
+
+        // Renderizar galería de fotos existentes
+        function renderizarFotosExistentes() {
+            if (fotosActuales.length === 0) {
+                fotosExistentesDiv.innerHTML = '<p class="text-muted text-center">No hay fotos aún</p>';
+                return;
+            }
+
+            fotosExistentesDiv.innerHTML = '';
+            fotosActuales.forEach((foto, index) => {
+                const col = document.createElement('div');
+                col.className = 'col-4';
+                col.innerHTML = `
+                    <div class="foto-item">
+                        <img src="${foto.url}" alt="Foto ${index + 1}">
+                        <button class="delete-btn" data-foto-id="${foto.id}" title="Eliminar foto">
+                            <i class="bi bi-trash-fill"></i>
+                        </button>
+                    </div>
+                `;
+                fotosExistentesDiv.appendChild(col);
+            });
+
+            // Agregar eventos de eliminación
+            document.querySelectorAll('.delete-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const fotoId = this.dataset.fotoId;
+                    eliminarFoto(fotoId);
+                });
+            });
+        }
+
+        // Actualizar estado de la sección de upload
+        function actualizarEstadoUpload() {
+            if (fotosActuales.length >= 3) {
+                uploadSection.style.display = 'none';
+                limiteAlcanzado.style.display = 'block';
+                guardarBtn.style.display = 'none';
+            } else {
+                uploadSection.style.display = 'block';
+                limiteAlcanzado.style.display = 'none';
+                guardarBtn.style.display = 'block';
+            }
+        }
+
+        // Eliminar foto
+        function eliminarFoto(fotoId) {
+            if (!confirm('¿Estás seguro de eliminar esta foto?')) return;
+
+            const clienteId = clienteIdInput.value;
+            fetch(`/clientes/${clienteId}/fotos/${fotoId}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    cargarFotosExistentes(clienteId);
+                    alert('Foto eliminada exitosamente');
+                } else {
+                    alert('Error al eliminar la foto');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al eliminar la foto');
+            });
+        }
+
+        // Preview de la imagen seleccionada
+        fotoInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImg.src = e.target.result;
+                    previewImg.style.display = 'block';
+                    previewPlaceholder.style.display = 'none';
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // Guardar nueva foto
+        guardarBtn.addEventListener('click', function() {
+            const fileInput = document.getElementById('fotoInput');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('Por favor selecciona una imagen');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('foto', fileInput.files[0]);
+            
+            const clienteId = clienteIdInput.value;
+
+            fetch(`/clientes/${clienteId}/subir_foto`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Foto guardada exitosamente');
+                    cargarFotosExistentes(clienteId);
+                    resetearFormulario();
+                    // Actualizar la página para mostrar las nuevas fotos
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    alert('Error al guardar la foto: ' + (data.error || 'Desconocido'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al subir la foto');
+            });
+        });
+
+        // Resetear formulario
+        function resetearFormulario() {
+            fotoInput.value = '';
+            previewImg.style.display = 'none';
+            previewImg.src = '';
+            previewPlaceholder.style.display = 'block';
+        }
+
+        // Resetear modal al cerrarlo
+        document.getElementById('fotoModal').addEventListener('hidden.bs.modal', function() {
+            resetearFormulario();
+            fotosActuales = [];
+        });
+    });
+</script>
+
 {% endblock %}

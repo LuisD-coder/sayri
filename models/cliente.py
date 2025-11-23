@@ -23,3 +23,8 @@ class Cliente(db.Model):
     # ----------------------------------------------------------------------
     prestamos_individuales = db.relationship('PrestamoIndividual', backref='cliente', lazy=True)
     contratos = relationship('Contrato', back_populates='cliente', lazy=True)
+
+    def get_num_fotos(self):
+        """Retorna el número de fotos del cliente"""
+        from models.foto_cliente import FotoCliente
+        return FotoCliente.query.filter_by(cliente_id=self.id).count()

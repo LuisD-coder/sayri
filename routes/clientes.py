@@ -1,8 +1,13 @@
-from flask import Blueprint, render_template, request, redirect, url_for, abort
-from models import db, Cliente, Grupo, PrestamoGrupal, PrestamoIndividual,Contrato, Pago
+from flask import Blueprint, render_template, request, redirect, url_for, abort, jsonify
+from models import db, Cliente, Grupo, PrestamoGrupal, PrestamoIndividual,Contrato, Pago, FotoCliente
+from werkzeug.utils import secure_filename
 from flask_login import login_required, current_user
+import os
+from PIL import Image
+from io import BytesIO
 
 clientes_bp = Blueprint('clientes', __name__, url_prefix='/clientes')
+fotos = db.relationship('FotoCliente', backref='cliente', lazy=True, cascade='all, delete-orphan', order_by='FotoCliente.orden')
 
 # Crear un nuevo cliente
 @clientes_bp.route('/nuevo', methods=['GET', 'POST'])
@@ -153,3 +158,127 @@ def actualizar_cliente(cliente_id):
 
     # En caso de GET, renderizar el formulario de edición con los datos existentes
     return render_template('clientes/editar_cliente.html', cliente=cliente, grupos=grupos)
+
+
+
+UPLOAD_FOLDER = 'static/uploads/clientes'
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg'}
+MAX_FOTOS_POR_CLIENTE = 3
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+@clientes_bp.route('/<int:cliente_id>/fotos', methods=['GET'])
+@login_required
+def obtener_fotos(cliente_id):
+    """Obtener todas las fotos de un cliente"""
+    from models.cliente import Cliente
+    from models.foto_cliente import FotoCliente
+    
+    cliente = Cliente.query.get_or_404(cliente_id)
+    fotos = FotoCliente.query.filter_by(cliente_id=cliente_id).order_by(FotoCliente.orden).all()
+    
+    return jsonify({
+        'success': True,
+        'fotos': [foto.to_dict() for foto in fotos]
+    })
+
+@clientes_bp.route('/<int:cliente_id>/subir_foto', methods=['POST'])
+@login_required
+def subir_foto(cliente_id):
+    """Subir y comprimir una nueva foto para el cliente"""
+    from models.cliente import Cliente
+    from models.foto_cliente import FotoCliente
+    from models import db
+    
+    cliente = Cliente.query.get_or_404(cliente_id)
+    
+    # Verificar número de fotos existentes
+    num_fotos = FotoCliente.query.filter_by(cliente_id=cliente_id).count()
+    if num_fotos >= MAX_FOTOS_POR_CLIENTE:
+        return jsonify({
+            'success': False,
+            'error': f'El cliente ya tiene {MAX_FOTOS_POR_CLIENTE} fotos. Elimina una antes de agregar otra.'
+        }), 400
+    
+    # Validar archivo
+    if 'foto' not in request.files:
+        return jsonify({'success': False, 'error': 'No se envió archivo'}), 400
+    
+    foto = request.files['foto']
+    
+    if foto.filename == '':
+        return jsonify({'success': False, 'error': 'Archivo vacío'}), 400
+    
+    if not allowed_file(foto.filename):
+        return jsonify({'success': False, 'error': 'Formato no permitido'}), 400
+    
+    # Crear directorio si no existe
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    
+    # Generar nombre único
+    from datetime import datetime
+    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    filename = secure_filename(f"cliente_{cliente_id}_{timestamp}_{foto.filename}")
+    filepath = os.path.join(UPLOAD_FOLDER, filename)
+    
+    # 🧠 COMPRIMIR imagen antes de guardar
+    try:
+        # Abrir la imagen con Pillow
+        img = Image.open(foto)
+        
+        # Convertir a RGB (para evitar errores con PNG con transparencia)
+        if img.mode in ("RGBA", "P"):
+            img = img.convert("RGB")
+        
+        # Redimensionar si es muy grande (opcional, mejora rendimiento)
+        max_width = 1280  # puedes ajustar el tamaño máximo
+        if img.width > max_width:
+            ratio = max_width / float(img.width)
+            new_height = int(float(img.height) * ratio)
+            img = img.resize((max_width, new_height), Image.LANCZOS)
+        
+        # Guardar comprimida con calidad reducida (80 = buena calidad)
+        img.save(filepath, optimize=True, quality=80)
+    
+    except Exception as e:
+        print(f"Error al comprimir imagen: {e}")
+        foto.save(filepath)  # Si falla, guardar original como respaldo
+    
+    # Guardar referencia en base de datos
+    nueva_foto = FotoCliente(
+        cliente_id=cliente_id,
+        url=f'/static/uploads/clientes/{filename}',
+        orden=num_fotos  # La nueva foto va al final
+    )
+    db.session.add(nueva_foto)
+    db.session.commit()
+    
+    return jsonify({
+        'success': True,
+        'foto': nueva_foto.to_dict()
+    })
+
+
+@clientes_bp.route('/<int:cliente_id>/fotos/<int:foto_id>', methods=['DELETE'])
+@login_required
+def eliminar_foto(cliente_id, foto_id):
+    """Eliminar una foto del cliente"""
+    from models.foto_cliente import FotoCliente
+    from models import db
+    
+    foto = FotoCliente.query.filter_by(id=foto_id, cliente_id=cliente_id).first_or_404()
+    
+    # Eliminar archivo físico
+    try:
+        filepath = foto.url.lstrip('/')
+        if os.path.exists(filepath):
+            os.remove(filepath)
+    except Exception as e:
+        print(f"Error al eliminar archivo: {e}")
+    
+    # Eliminar de base de datos
+    db.session.delete(foto)
+    db.session.commit()
+    
+    return jsonify({'success': True})

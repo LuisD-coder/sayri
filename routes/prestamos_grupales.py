@@ -57,16 +57,24 @@ def lista_prestamos_grupales():
 
     grupos = Grupo.query.all()
 
-    # Si no se ha seleccionado un grupo, no cargamos prestamos
     prestamos_grupales = []
+    selected_grupo = None
+    
     if grupo_id:
-        prestamos_grupales = PrestamoGrupal.query.filter_by(grupo_id=grupo_id).all()
+        selected_grupo = Grupo.query.get_or_404(grupo_id)
+        prestamos_grupales = PrestamoGrupal.query.filter_by(grupo_id=grupo_id)\
+            .order_by(PrestamoGrupal.fecha_desembolso.desc()).all()
+        
+        # 🔍 DEBUG: Ver el orden
+        print("\n=== DEBUG: Orden de préstamos ===")
+        for i, p in enumerate(prestamos_grupales):
+            print(f"{i}: {p.grupo.nombre} - Fecha: {p.fecha_desembolso}")
+        print("=================================\n")
 
     return render_template('prestamos_grupales/lista_prestamos_grupales.html',
                            prestamos_grupales=prestamos_grupales,
                            grupos=grupos,
-                           selected_grupo_id=grupo_id)
-
+                           selected_grupo=selected_grupo)
 
 @prestamos_grupales_bp.route('/eliminar/<int:prestamo_grupal_id>', methods=['POST'])
 @login_required
@@ -178,19 +186,21 @@ def prestamos_individuales(prestamo_grupal_id):
 @prestamos_grupales_bp.route('/grupo/<int:grupo_id>/prestamos')
 @login_required
 def prestamos_por_grupo(grupo_id):
-    # Filtrar los prestamos grupales por el grupo seleccionado
-    prestamos_grupales = PrestamoGrupal.query.filter_by(grupo_id=grupo_id).all()
-    
-    # Obtener el grupo para mostrar su informacion en la plantilla
+    # Obtener el grupo para mostrar su información en la plantilla
     grupo = Grupo.query.get_or_404(grupo_id)
+    
+    # Filtrar los préstamos grupales por el grupo seleccionado
+    # ✅ Ordenar de más reciente a más antiguo
+    prestamos_grupales = PrestamoGrupal.query.filter_by(grupo_id=grupo_id)\
+        .order_by(PrestamoGrupal.fecha_desembolso.desc()).all()
     
     # Obtener la lista completa de grupos
     grupos = Grupo.query.all()
 
     return render_template('prestamos_grupales/lista_prestamos_grupales.html',  
                            prestamos_grupales=prestamos_grupales,  
-                           grupo=grupo,
-                           grupos=grupos)  # Aqui se pasa la lista de grupos
+                           selected_grupo=grupo,  # ✅ Cambio: grupo -> selected_grupo
+                           grupos=grupos)
 
 
 # ==============================================================================
