@@ -12,3 +12,4 @@ from models.rol import Rol
 from models.usuario import Usuario
 from models.pago_parcial import PagoParcial
 from models.foto_cliente import FotoCliente
+from models.usuario_grupo import usuario_grupo

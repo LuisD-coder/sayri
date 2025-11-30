@@ -5,7 +5,6 @@
 {% block content %}
 <div class="container py-5">
     
-    <!-- Sección de novedades -->
     <div class="card shadow-lg border-0 mb-5">
         <div class="card-header bg-primary text-white">
             <h3 class="mb-0">
@@ -14,10 +13,31 @@
         </div>
         <div class="card-body">
 
-            <!-- 📸 Actualización: Sistema de Fotos de Clientes -->
             <div class="update-item">
                 <div class="update-header">
                     <span class="badge bg-danger">Nuevo</span>
+                    <h5 class="d-inline ms-2">Asignación de Usuarios a Grupos</h5>
+                    <span class="text-muted float-end">Nov 2025</span>
+                </div>
+                <div class="update-content">
+                    <p class="mb-2"><strong>¿Qué cambió?</strong></p>
+                    <ul>
+                        <li>Implementación de relación <strong>Muchos a Muchos</strong> entre Usuarios y Grupos.</li>
+                        <li>Nueva estructura de base de datos (<code>usuario_grupo</code>) para asignaciones dinámicas.</li>
+                        <li>Ahora es posible <strong>vincular un asesor a múltiples grupos</strong> simultáneamente.</li>
+                        <li>Mayor control sobre qué usuarios pueden gestionar qué grupos de crédito.</li>
+                    </ul>
+                    <div class="alert alert-primary mb-0">
+                        <i class="bi bi-database-fill-gear"></i> <strong>Actualización Técnica:</strong> Base de datos migrada exitosamente para soportar la gestión avanzada de permisos por grupo.
+                    </div>
+                </div>
+            </div>
+
+            <hr class="my-4">
+
+            <div class="update-item">
+                <div class="update-header">
+                    <span class="badge bg-success">Mejorado</span>
                     <h5 class="d-inline ms-2">Sistema de Gestión de Fotos de Clientes</h5>
                     <span class="text-muted float-end">Nov 2025</span>
                 </div>
@@ -40,7 +60,6 @@
 
             <hr class="my-4">
 
-            <!-- 🎨 Actualización: Diseño de Préstamos Individuales -->
             <div class="update-item">
                 <div class="update-header">
                     <span class="badge bg-success">Mejorado</span>
@@ -61,7 +80,6 @@
 
             <hr class="my-4">
 
-            <!-- 📋 Actualización: Lista de Préstamos Grupales -->
             <div class="update-item">
                 <div class="update-header">
                     <span class="badge bg-success">Mejorado</span>
@@ -85,7 +103,6 @@
 
             <hr class="my-4">
 
-            <!-- Actualización: Reprogramación de Domingos -->
             <div class="update-item">
                 <div class="update-header">
                     <span class="badge bg-info">Activo</span>
@@ -105,7 +122,6 @@
 
             <hr class="my-4">
 
-            <!-- Actualización: Optimización de Agenda Semanal -->
             <div class="update-item">
                 <div class="update-header">
                     <span class="badge bg-info">Activo</span>
@@ -125,7 +141,6 @@
         </div>
     </div>
 
-    <!-- Accesos rápidos -->
     <div class="row g-4">
         <div class="col-md-4">
             <div class="card h-100 shadow-sm border-0 quick-access-card">
@@ -169,12 +184,11 @@
         </div>
     </div>
 
-    <!-- Footer informativo -->
     <div class="text-center mt-5 pt-4 border-top">
         <p class="text-muted mb-1">
             <i class="bi bi-info-circle"></i> ¿Necesitas ayuda? Contacta al administrador del sistema
         </p>
-        <small class="text-muted">Sistema Sayri v4.2 - Gestión de Préstamos Grupales</small>
+        <small class="text-muted">Sistema Sayri v4.3 - Gestión de Préstamos Grupales</small>
     </div>
 </div>
 

@@ -10,6 +10,14 @@
         <a href="{{ url_for('grupos.nuevo_grupo') }}" class="btn btn-new-group">+ Nuevo Grupo</a>
     </div>
 
+    <!-- ✅ Alerta informativa para usuarios no-admin -->
+    {% if current_user.rol.nombre != 'admin' %}
+    <div class="alert-info-custom">
+        <i class="bi bi-info-circle me-2"></i>
+        Mostrando solo los grupos a los que tienes acceso
+    </div>
+    {% endif %}
+
     <!-- Panel de búsqueda y filtros -->
     <div class="search-filter-panel">
         <div class="search-section">
@@ -22,7 +30,8 @@
                 <select id="sortSelect" class="sort-select">
                     <option value="nombre-asc">Nombre (A-Z)</option>
                     <option value="nombre-desc">Nombre (Z-A)</option>
-                    <option value="clientes-asc">Creditos Individuales</option>
+                    <option value="clientes-asc">Clientes (Menor a Mayor)</option>
+                    <option value="clientes-desc">Clientes (Mayor a Menor)</option>
                 </select>
             </div>
             
@@ -40,7 +49,8 @@
             <div class="grupo-card" 
                  data-nombre="{{ grupo.nombre|lower }}" 
                  data-clientes="{{ grupo.clientes|length }}"
-                 data-prestamos="{{ grupo.prestamos_grupales|length }}">
+                 data-prestamos="{{ grupo.prestamos_grupales|length }}"
+                 data-usuarios="{{ grupo.usuarios|length }}">
                 <h3>
                     {{ grupo.nombre }}
                     <a href="{{ url_for('grupos.editar_grupo', grupo_id=grupo.id) }}" class="btn-edit-group" title="Editar Grupo">
@@ -51,16 +61,44 @@
                 <p class="prestamos-count"><strong>Préstamos Grupales:</strong> {{ grupo.prestamos_grupales|length }}</p>
                 <p class="clientes-count"><strong>Clientes Asignados:</strong> {{ grupo.clientes|length }}</p>
                 
+                <!-- ✅ Mostrar usuarios con acceso (solo admin) -->
+                {% if current_user.rol.nombre == 'admin' %}
+                <p class="usuarios-count">
+                    <strong><i class="bi bi-shield-lock"></i> Usuarios con acceso:</strong> {{ grupo.usuarios|length }}
+                    {% if grupo.usuarios|length == 0 %}
+                    <span class="badge-warning">Sin usuarios</span>
+                    {% endif %}
+                </p>
+                {% endif %}
+                
                 <div class="grupo-actions">
-                    <a href="{{ url_for('grupos.asignar_clientes', grupo_id=grupo.id) }}" class="btn btn-assign">Asignar Clientes</a>
-                    <a href="{{ url_for('prestamos_grupales.prestamos_por_grupo', grupo_id=grupo.id) }}" class="btn btn-view">Ver Préstamos</a>
+                    <a href="{{ url_for('grupos.asignar_clientes', grupo_id=grupo.id) }}" class="btn btn-assign" title="Asignar Clientes">
+                        <i class="bi bi-person-plus"></i> Asignar
+                    </a>
+                    <a href="{{ url_for('prestamos_grupales.prestamos_por_grupo', grupo_id=grupo.id) }}" class="btn btn-view" title="Ver Préstamos">
+                        <i class="bi bi-eye"></i> Ver
+                    </a>
 
-                    <!-- Botón de eliminar con confirmación -->
+                    <!-- ✅ Botón de gestionar usuarios (solo admin) -->
+                    {% if current_user.rol.nombre == 'admin' %}
+                    <a href="{{ url_for('grupos.gestionar_usuarios_grupo', grupo_id=grupo.id) }}" 
+                       class="btn btn-users" 
+                       title="Gestionar Usuarios">
+                        <i class="bi bi-people"></i> Usuarios
+                        {% if grupo.usuarios|length == 0 %}
+                        <span class="badge-alert">!</span>
+                        {% endif %}
+                    </a>
+                    {% endif %}
+
+                    <!-- Botón de eliminar con confirmación (solo admin y manager) -->
+                    {% if current_user.rol.nombre in ['admin', 'manager'] %}
                     <form action="{{ url_for('grupos.eliminar_grupo', grupo_id=grupo.id) }}" method="POST" class="delete-form">
-                        <button type="submit" class="btn btn-delete" onclick="return confirm('¿Estás seguro de eliminar este grupo? Esta acción no se puede deshacer.');">
+                        <button type="submit" class="btn btn-delete" onclick="return confirm('¿Estás seguro de eliminar este grupo? Esta acción no se puede deshacer.');" title="Eliminar Grupo">
                             <i class="bi bi-trash"></i> Eliminar
                         </button>
                     </form>
+                    {% endif %}
                 </div>
             </div>
         {% endfor %}
@@ -73,12 +111,36 @@
         <p>Intenta ajustar tus filtros o búsqueda</p>
     </div>
 
+    <!-- Mensaje cuando no hay grupos -->
+    {% if grupos|length == 0 %}
+    <div class="empty-state">
+        <i class="bi bi-inbox" style="font-size: 5rem; color: #ccc;"></i>
+        <h3>No tienes grupos asignados</h3>
+        <p>Crea un nuevo grupo o solicita acceso al administrador</p>
+        <a href="{{ url_for('grupos.nuevo_grupo') }}" class="btn btn-new-group mt-3">
+            <i class="bi bi-plus-circle me-2"></i>Crear Primer Grupo
+        </a>
+    </div>
+    {% endif %}
+
     <style>
         /* Título */
         .title {
             text-align: center;
             font-size: 28px;
             margin-bottom: 30px;
+        }
+
+        /* Alerta informativa */
+        .alert-info-custom {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            color: #0c5460;
+            text-align: center;
+            font-weight: 500;
         }
 
         /* Contenedor del botón de agregar */
@@ -157,18 +219,6 @@
             cursor: pointer;
         }
 
-        .filters-section {
-            display: none;
-        }
-
-        .filter-checkbox {
-            display: none;
-        }
-
-        .filter-checkbox input[type="checkbox"] {
-            display: none;
-        }
-
         .btn-clear {
             padding: 10px 20px;
             background: #6c757d;
@@ -222,11 +272,39 @@
             margin-bottom: 20px;
         }
 
-        /* Contador de préstamos grupales */
-        .prestamos-count, .clientes-count {
+        /* Contador de información */
+        .prestamos-count, .clientes-count, .usuarios-count {
             color: #000000;
             font-size: 16px;
             margin-bottom: 10px;
+        }
+
+        .usuarios-count {
+            color: #856404;
+            background: #fff3cd;
+            padding: 8px;
+            border-radius: 5px;
+            border-left: 3px solid #ffc107;
+        }
+
+        /* Badges */
+        .badge-warning {
+            background: #dc3545;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 0.75rem;
+            margin-left: 5px;
+        }
+
+        .badge-alert {
+            background: #dc3545;
+            color: white;
+            padding: 2px 6px;
+            border-radius: 50%;
+            font-size: 0.7rem;
+            margin-left: 3px;
+            font-weight: bold;
         }
 
         /* Acciones */
@@ -235,6 +313,7 @@
             justify-content: center;
             gap: 10px;
             flex-wrap: wrap;
+            margin-top: 15px;
         }
 
         /* Estilos de los botones */
@@ -246,6 +325,7 @@
             transition: background-color 0.3s;
             border: none;
             cursor: pointer;
+            font-size: 14px;
         }
 
         .btn-assign {
@@ -264,6 +344,17 @@
 
         .btn-view:hover {
             background: #0056b3;
+        }
+
+        /* ✅ Botón de usuarios (solo admin) */
+        .btn-users {
+            background: #ffc107;
+            color: #000;
+            position: relative;
+        }
+
+        .btn-users:hover {
+            background: #e0a800;
         }
 
         .btn-delete {
@@ -292,6 +383,18 @@
             color: #495057;
         }
 
+        /* Estado vacío */
+        .empty-state {
+            text-align: center;
+            padding: 80px 20px;
+            color: #6c757d;
+        }
+
+        .empty-state h3 {
+            margin-top: 20px;
+            color: #495057;
+        }
+
         /* Adaptación para dispositivos móviles */
         @media screen and (max-width: 768px) {
             .grupos-grid {
@@ -303,6 +406,14 @@
             }
 
             .btn-clear {
+                width: 100%;
+            }
+
+            .grupo-actions {
+                flex-direction: column;
+            }
+
+            .btn {
                 width: 100%;
             }
         }
@@ -346,6 +457,8 @@
                             return b.dataset.nombre.localeCompare(a.dataset.nombre);
                         case 'clientes-asc':
                             return parseInt(a.dataset.clientes) - parseInt(b.dataset.clientes);
+                        case 'clientes-desc':
+                            return parseInt(b.dataset.clientes) - parseInt(a.dataset.clientes);
                         default:
                             return 0;
                     }

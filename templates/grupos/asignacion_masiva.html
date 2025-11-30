@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}Asignación Masiva de Grupos{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0"><i class="bi bi-diagram-3-fill me-2"></i>Asignar Grupos a Asesor</h4>
+                    <a href="{{ url_for('grupos.lista_grupos') }}" class="btn btn-light btn-sm">Volver</a>
+                </div>
+                
+                <div class="card-body">
+                    <form method="GET" action="{{ url_for('grupos.asignacion_masiva') }}" id="selectorForm" class="mb-4 p-3 bg-light rounded border">
+                        <div class="row align-items-end">
+                            <div class="col-md-8">
+                                <label for="usuario_id" class="form-label fw-bold text-primary">1. Seleccionar Asesor/Gestor:</label>
+                                <select name="usuario_id" id="usuario_id" class="form-select form-select-lg" onchange="document.getElementById('selectorForm').submit()">
+                                    <option value="" disabled {% if not usuario_seleccionado %}selected{% endif %}>-- Elige un usuario --</option>
+                                    {% for asesor in asesores %}
+                                        <option value="{{ asesor.id }}" {% if usuario_seleccionado and usuario_seleccionado.id == asesor.id %}selected{% endif %}>
+                                            {{ asesor.nombre }} {{ asesor.apellido }} ({{ asesor.rol.nombre }})
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4 text-muted">
+                                <small><i class="bi bi-info-circle"></i> Al seleccionar, se cargarán sus grupos actuales.</small>
+                            </div>
+                        </div>
+                    </form>
+
+                    <hr>
+
+                    {% if usuario_seleccionado %}
+                    <form method="POST" action="{{ url_for('grupos.asignacion_masiva') }}">
+                        <input type="hidden" name="usuario_id" value="{{ usuario_seleccionado.id }}">
+                        
+                        <h5 class="mb-3 text-primary">2. Selecciona los grupos para {{ usuario_seleccionado.nombre }}:</h5>
+                        
+                        <div class="mb-3">
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="marcarTodos(true)">Marcar Todos</button>
+                            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="marcarTodos(false)">Desmarcar Todos</button>
+                        </div>
+
+                        <div class="row">
+                            {% for grupo in grupos %}
+                            <div class="col-md-6 col-lg-4 mb-2">
+                                <div class="form-check card-group-select p-2 border rounded {% if grupo.id in grupos_ids_asignados %}bg-blue-light border-primary{% endif %}">
+                                    <input class="form-check-input ms-1" type="checkbox" 
+                                           name="grupos_ids" 
+                                           value="{{ grupo.id }}" 
+                                           id="grupo_{{ grupo.id }}"
+                                           {% if grupo.id in grupos_ids_asignados %}checked{% endif %}>
+                                    
+                                    <label class="form-check-label w-100 ps-2 fw-bold" for="grupo_{{ grupo.id }}" style="cursor: pointer;">
+                                        {{ grupo.nombre }}
+                                    </label>
+                                    <div class="text-muted ps-2 small">
+                                        <small>{{ grupo.clientes|length }} Clientes</small>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="d-grid gap-2 mt-4">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="bi bi-save me-2"></i>Guardar Asignaciones
+                            </button>
+                        </div>
+                    </form>
+                    {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-person-badge" style="font-size: 3rem;"></i>
+                        <p class="mt-3">Por favor selecciona un asesor arriba para ver y gestionar sus grupos.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .bg-blue-light { background-color: #e7f1ff; }
+    .card-group-select:hover { background-color: #f8f9fa; border-color: #0d6efd !important; }
+    .form-check-input:checked { background-color: #0d6efd; border-color: #0d6efd; }
+</style>
+
+<script>
+    function marcarTodos(estado) {
+        const checkboxes = document.querySelectorAll('input[name="grupos_ids"]');
+        checkboxes.forEach(cb => cb.checked = estado);
+    }
+</script>
+{% endblock %}

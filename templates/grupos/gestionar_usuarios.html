@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}Gestionar Usuarios - {{ grupo.nombre }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <h2 class="mb-4">
+        <i class="bi bi-shield-lock me-2"></i>Gestionar Usuarios del Grupo: <strong>{{ grupo.nombre }}</strong>
+    </h2>
+    
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-check-circle me-2"></i>Usuarios con Acceso
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if grupo.usuarios %}
+                    <ul class="list-group">
+                        {% for usuario in grupo.usuarios %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center user-item">
+                            <div class="user-info">
+                                <i class="bi bi-person-fill text-success me-2 align-self-start mt-1"></i>
+                                <div>
+                                    <div class="fw-bold">
+                                        {{ usuario.nombre }} {{ usuario.apellido }}
+                                        <span class="badge bg-secondary ms-1" style="font-size: 0.7rem;">{{ usuario.rol.nombre }}</span>
+                                    </div>
+                                    <div class="text-muted small">
+                                        <i class="bi bi-envelope-at me-1"></i>{{ usuario.email }}
+                                    </div>
+                                </div>
+                            </div>
+                            <form method="POST" style="display:inline;" onsubmit="return confirm('¿Remover acceso de {{ usuario.nombre }}?')">
+                                <input type="hidden" name="usuario_id" value="{{ usuario.id }}">
+                                <input type="hidden" name="accion" value="remover">
+                                <button type="submit" class="btn btn-sm btn-danger">
+                                    <i class="bi bi-x-circle"></i>
+                                </button>
+                            </form>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                    {% else %}
+                    <div class="alert alert-warning mb-0">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Atención:</strong> No hay usuarios asignados a este grupo
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-plus-circle me-2"></i>Agregar Usuario
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% set usuarios_disponibles = [] %}
+                    {% for usuario in todos_usuarios %}
+                        {% if usuario not in grupo.usuarios %}
+                            {% set _ = usuarios_disponibles.append(usuario) %}
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if usuarios_disponibles %}
+                    <form method="POST">
+                        <input type="hidden" name="accion" value="agregar">
+                        <div class="mb-3">
+                            <label for="usuario_id" class="form-label fw-bold">Seleccionar Usuario</label>
+                            <select name="usuario_id" id="usuario_id" class="form-select form-select-lg" required>
+                                <option value="">-- Seleccionar Usuario --</option>
+                                {% for usuario in usuarios_disponibles %}
+                                <option value="{{ usuario.id }}">
+                                    {{ usuario.nombre }} {{ usuario.apellido }} ({{ usuario.email }}) - {{ usuario.rol.nombre }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <small class="form-text text-muted">
+                                Selecciona un usuario por su nombre o correo.
+                            </small>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-plus-circle me-2"></i>Agregar Usuario al Grupo
+                            </button>
+                        </div>
+                    </form>
+                    {% else %}
+                    <div class="alert alert-info mb-0">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Información:</strong> Todos los usuarios ya tienen acceso a este grupo
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card shadow-sm border-0 bg-light">
+                <div class="card-body">
+                    <h6 class="card-title">
+                        <i class="bi bi-info-circle text-info me-2"></i>Información sobre Permisos
+                    </h6>
+                    <ul class="mb-0 info-list">
+                        <li><i class="bi bi-check2 text-success me-2"></i>Los usuarios asignados podrán ver clientes y préstamos de este grupo.</li>
+                        <li><i class="bi bi-check2 text-success me-2"></i>Los usuarios <strong>admin</strong> tienen acceso total.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="mt-4 d-flex gap-2">
+        <a href="{{ url_for('grupos.lista_grupos') }}" class="btn btn-secondary btn-lg">
+            <i class="bi bi-arrow-left me-2"></i>Volver
+        </a>
+        <a href="{{ url_for('grupos.detalle_grupo', grupo_id=grupo.id) }}" class="btn btn-outline-primary btn-lg">
+            <i class="bi bi-eye me-2"></i>Ver Detalles
+        </a>
+    </div>
+</div>
+
+<style>
+    .card { border-radius: 12px; border: none; overflow: hidden; }
+    .card-header { border-radius: 12px 12px 0 0 !important; font-weight: 600; padding: 1rem 1.5rem; }
+    .user-item { border-left: 4px solid #28a745; transition: all 0.3s; padding: 0.8rem 1rem; }
+    .user-item:hover { background-color: #f8f9fa; transform: translateX(5px); box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+    .user-info { display: flex; align-items: center; }
+    .form-select { border: 2px solid #dee2e6; border-radius: 8px; }
+    .form-select:focus { border-color: #0d6efd; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); }
+    .btn { border-radius: 8px; transition: all 0.3s; }
+    .bg-light { background-color: #f8f9fa !important; }
+    .info-list { list-style: none; padding-left: 0; }
+    .info-list li { padding: 0.3rem 0; color: #495057; }
+</style>
+{% endblock %}
