@@ -63,6 +63,15 @@
         font-style: italic;
     }
 
+    /* Estilo para el nombre del asesor (Solo Admin) */
+    .asesor-tag {
+        font-size: 0.75em;
+        color: #6610f2; /* Color morado para diferenciar */
+        font-weight: normal;
+        display: block; /* Para que salga debajo del nombre del grupo */
+        margin-top: 2px;
+    }
+
     /* Media query para pantallas más pequeñas. */
     @media (max-width: 768px) {
         #reporteTabla table {
@@ -150,7 +159,24 @@
                     <td>
                         {% if fecha_dia in pagos_organizados and pagos_organizados[fecha_dia] %}
                             {% for grupo_nombre, pagos_grupo in pagos_organizados[fecha_dia].items() %}
-                                <strong>➡︎ {{ grupo_nombre }}</strong>
+                                
+                                <strong>
+                                    ➡︎ {{ grupo_nombre }}
+                                    
+                                    {% if current_user.rol.nombre == 'admin' %}
+                                        {# Obtenemos el objeto grupo desde el primer pago para sacar sus usuarios #}
+                                        {% set grupo_obj = pagos_grupo[0].pago.prestamo_individual.prestamo_grupal.grupo %}
+                                        
+                                        <span class="asesor-tag">
+                                            <i class="bi bi-person-badge"></i>
+                                            {% for usuario in grupo_obj.usuarios %}
+                                               {{ usuario.email.split('@')[0] }}{% if not loop.last %}, {% endif %}
+                                            {% else %}
+                                                Sin Asesor
+                                            {% endfor %}
+                                        </span>
+                                    {% endif %}
+                                </strong>
                                 {% for pago_info in pagos_grupo %}
                                 <div class="detalle-pago {% if pago_info.reprogramado %}pago-reprogramado{% endif %}">
                                     <p>
@@ -180,7 +206,19 @@
                         <strong>⚠️ Lunes {{ lunes_extra.strftime('%d-%m-%Y') }} (Pagos reprogramados del domingo anterior):</strong>
                         <div class="mt-2">
                             {% for grupo_nombre, pagos_grupo in pagos_organizados[lunes_extra].items() %}
-                                <strong>➡︎ {{ grupo_nombre }}</strong>
+                                
+                                <strong>
+                                    ➡︎ {{ grupo_nombre }}
+                                    {% if current_user.rol.nombre == 'admin' %}
+                                        {% set grupo_obj = pagos_grupo[0].pago.prestamo_individual.prestamo_grupal.grupo %}
+                                        <span class="asesor-tag">
+                                            <i class="bi bi-person-badge"></i>
+                                            {% for usuario in grupo_obj.usuarios %}
+                                                {{ usuario.nombre }}{% if not loop.last %}, {% endif %}
+                                            {% endfor %}
+                                        </span>
+                                    {% endif %}
+                                </strong>
                                 {% for pago_info in pagos_grupo %}
                                 <div class="detalle-pago pago-reprogramado">
                                     <p>
