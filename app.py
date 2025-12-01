@@ -1,9 +1,12 @@
-from flask import Flask, render_template, request, redirect, url_for # Importa request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for
 from flask_migrate import Migrate
 from config import Config
-from flask_login import LoginManager
-from models import db, Usuario, Pago
+from flask_login import LoginManager, current_user
+# ✅ 1. Agregamos 'Comunicado' a los imports
+from models import db, Usuario, Pago, Comunicado
 from routes import register_routes
+# ✅ 2. Importamos el Blueprint de comunicados
+from routes.comunicados import comunicados_bp
 from utils import inicializar_roles, crear_admin
 from datetime import date
 
@@ -15,39 +18,21 @@ def create_app():
     Migrate(app, db)
 
     # --- Configuración del modo mantenimiento ---
-    # Lo ideal es que esto venga de config.py o de una variable de entorno
-    # Por ahora, lo definimos aquí para el ejemplo.
-    # CAMBIA ESTO A TRUE CUANDO QUIERAS ACTIVAR EL MANTENIMIENTO
     app.config['MAINTENANCE_MODE'] = False
-
-    # Opcional: Lista de IPs permitidas para acceder durante el mantenimiento
-    # Reemplaza 'TU_DIRECCION_IP_PUBLICA' con tu IP real.
-    # Puedes añadir más IPs si es necesario: ['IP_ADMIN1', 'IP_ADMIN2']
     ALLOWED_IPS_DURING_MAINTENANCE = ['201.218.159.117']
-
 
     # --- Lógica del before_request para el modo mantenimiento ---
     @app.before_request
     def check_maintenance():
-        # Si el modo de mantenimiento está activado
         if app.config.get('MAINTENANCE_MODE'):
-            # Permite el acceso a la ruta de la página de mantenimiento
-            # para que la página en sí pueda ser mostrada.
             if request.path == url_for('maintenance_page'):
-                return None # Continúa con la solicitud normal para esta ruta
+                return None 
 
-            # Permite el acceso a IPs específicas (como la tuya)
             if request.remote_addr in ALLOWED_IPS_DURING_MAINTENANCE:
-                return None # Continúa con la solicitud normal para estas IPs
+                return None 
 
-            # Si no es la página de mantenimiento y la IP no está permitida,
-            # muestra la página de mantenimiento con código 503.
             return render_template('maintenance.html'), 503
 
-
-    # --- Definición de la ruta de la página de mantenimiento ---
-    # Es crucial que esta ruta exista y que la lógica de before_request
-    # permita el acceso a ella para evitar un bucle de redirección.
     @app.route('/maintenance')
     def maintenance_page():
         return render_template('maintenance.html')
@@ -62,10 +47,30 @@ def create_app():
     def load_user(user_id):
         return db.session.get(Usuario, int(user_id))
 
-    # Registro de rutas (tus blueprints y otras rutas)
+    # Registro de rutas existentes
     register_routes(app)
+    
+    # ✅ 3. REGISTRAR EL NUEVO BLUEPRINT DE COMUNICADOS
+    app.register_blueprint(comunicados_bp)
 
-    # Ruta principal (solo se ejecutará si no hay modo de mantenimiento activo)
+    # ✅ 4. INYECCIÓN GLOBAL (Context Processor)
+    # Esto busca si hay un mensaje activo y lo envía a TODAS las plantillas (base.html)
+    @app.context_processor
+    def inject_comunicado_global():
+        # Solo buscamos si el usuario está logueado (opcional, ahorra consultas)
+        # o si quieres que se vea en el login, quita el 'if current_user'.
+        comunicado = None
+        try:
+            # Buscamos el comunicado activo más reciente
+            comunicado = Comunicado.query.filter_by(activo=True).order_by(Comunicado.fecha_creacion.desc()).first()
+        except Exception:
+            # Evita errores si la tabla aún no existe (durante migraciones)
+            pass
+            
+        return dict(comunicado_global=comunicado)
+
+
+    # Ruta principal
     @app.route('/')
     def index():
         today = date.today()
@@ -80,10 +85,6 @@ def create_app():
             Pago.estado == 'Pagado'
         ).limit(5).all()
 
-        print("Pagos próximos:", pagos_proximos)
-        print("Pagos vencidos:", pagos_vencidos)
-        print("Pagos pagados:", pagos_pagados)
-
         return render_template(
             'index.html',
             pagos_proximos=pagos_proximos,
@@ -91,7 +92,7 @@ def create_app():
             pagos_pagados=pagos_pagados
         )
 
-    # Ejecutar la inicialización de roles solo si es necesario
+    # Inicialización de roles
     with app.app_context():
         inicializar_roles()
         #crear_admin()

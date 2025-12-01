@@ -5,13 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}{% endblock %}</title>
 
-    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
 
-    <!-- Iconos -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
 
-    <!-- Estilos personalizados -->
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 
     <style>
@@ -31,85 +28,84 @@
             flex-direction: column;
         }
 
-       /* Estilo moderno y profesional del menú */
-.navbar {
-    background: linear-gradient(90deg, #000000 0%, #111111 100%);
-    border-bottom: 2px solid #ffc107;
-}
+        /* Estilo moderno y profesional del menú */
+        .navbar {
+            background: linear-gradient(90deg, #000000 0%, #111111 100%);
+            border-bottom: 2px solid #ffc107;
+        }
 
-.navbar-brand {
-    letter-spacing: 1px;
-    transition: transform 0.3s ease, color 0.3s ease;
-}
+        .navbar-brand {
+            letter-spacing: 1px;
+            transition: transform 0.3s ease, color 0.3s ease;
+        }
 
-.navbar-brand:hover {
-    color: #ffc107 !important;
-    transform: scale(1.05);
-}
+        .navbar-brand:hover {
+            color: #ffc107 !important;
+            transform: scale(1.05);
+        }
 
-/* Links */
-.nav-link {
-    color: #d1d5db !important;
-    font-weight: 500;
-    letter-spacing: 0.5px;
-    transition: color 0.25s ease, transform 0.25s ease;
-}
+        /* Links */
+        .nav-link {
+            color: #d1d5db !important;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            transition: color 0.25s ease, transform 0.25s ease;
+        }
 
-.nav-link:hover {
-    color: #ffc107 !important;
-    transform: translateY(-2px);
-}
+        .nav-link:hover {
+            color: #ffc107 !important;
+            transform: translateY(-2px);
+        }
 
-.nav-link.active {
-    color: #ffffff !important;
-    border-bottom: 2px solid #ffc107;
-}
+        .nav-link.active {
+            color: #ffffff !important;
+            border-bottom: 2px solid #ffc107;
+        }
 
-/* Dropdown */
-.dropdown-menu {
-    background-color: #1c1c1c;
-    border-radius: 8px;
-}
+        /* Dropdown */
+        .dropdown-menu {
+            background-color: #1c1c1c;
+            border-radius: 8px;
+        }
 
-.dropdown-item {
-    color: #e5e7eb;
-    transition: background 0.25s ease;
-}
+        .dropdown-item {
+            color: #e5e7eb;
+            transition: background 0.25s ease;
+        }
 
-.dropdown-item:hover {
-    background-color: #ffc107;
-    color: #000 !important;
-}
+        .dropdown-item:hover {
+            background-color: #ffc107;
+            color: #000 !important;
+        }
 
-/* Badge nuevo */
-.badge-nuevo {
-    background-color: #dc3545;
-    color: white;
-    font-size: 0.65rem;
-    padding: 2px 6px;
-    border-radius: 10px;
-    margin-left: 5px;
-    animation: pulse 2s infinite;
-}
+        /* Badge nuevo */
+        .badge-nuevo {
+            background-color: #dc3545;
+            color: white;
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-left: 5px;
+            animation: pulse 2s infinite;
+        }
 
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
-}
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
 
-/* Responsive adjustments */
-@media (max-width: 991px) {
-    .navbar-nav {
-        text-align: center;
-    }
+        /* Responsive adjustments */
+        @media (max-width: 991px) {
+            .navbar-nav {
+                text-align: center;
+            }
 
-    .nav-link {
-        display: inline-block;
-        width: 100%;
-        padding: 0.75rem;
-    }
-}
-
+            .nav-link {
+                display: inline-block;
+                width: 100%;
+                padding: 0.75rem;
+            }
+        }
 
         main.container {
             flex: 1;
@@ -166,7 +162,6 @@
                     </a>
                 </li>
                 
-                <!-- ✅ Menú desplegable de Grupos con opciones -->
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle px-3 {% if 'grupos' in request.path %}active{% endif %}" 
                        href="#" id="gruposDropdown" role="button" data-bs-toggle="dropdown">
@@ -224,8 +219,19 @@
                 {% endif %}
 
                 {% if current_user.is_authenticated and current_user.rol.nombre == 'admin' %}
-                    <li class="nav-item"><a class="nav-link px-3" href="{{ url_for('admin.listar_usuarios') }}"><i class="bi bi-person-lines-fill me-1"></i> Usuarios</a></li>
-                    <li class="nav-item"><a class="nav-link px-3" href="{{ url_for('admin.crear_usuario') }}"><i class="bi bi-person-plus-fill me-1"></i> Nuevo</a></li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle px-3" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-gear-fill me-1"></i> Admin
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-dark border-light">
+                            <li><a class="dropdown-item" href="{{ url_for('admin.listar_usuarios') }}"><i class="bi bi-person-lines-fill me-2"></i>Usuarios</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('admin.crear_usuario') }}"><i class="bi bi-person-plus-fill me-2"></i>Nuevo Usuario</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{{ url_for('comunicados.gestion') }}">
+                                <i class="bi bi-megaphone-fill me-2"></i>Comunicados
+                            </a></li>
+                        </ul>
+                    </li>
                 {% endif %}
 
                 {% if current_user.is_authenticated %}
@@ -242,6 +248,17 @@
 
 
     <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
         {% block content %}{% endblock %}
     </main>
 
@@ -250,5 +267,52 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    {% if comunicado_global and current_user.is_authenticated %}
+        <div class="modal fade" id="modalComunicado" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true" data-bs-backdrop="static">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="modal-header bg-{{ comunicado_global.tipo }} text-white">
+                        <h5 class="modal-title fw-bold" id="modalLabel">
+                            <i class="bi bi-megaphone-fill me-2"></i> {{ comunicado_global.titulo }}
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4 text-dark">
+                        <p class="fs-5">{{ comunicado_global.mensaje }}</p>
+                        <p class="text-muted small mb-0 mt-3 text-end">
+                            Publicado el: {{ comunicado_global.fecha_creacion.strftime('%d/%m/%Y') }}
+                        </p>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-{{ comunicado_global.tipo }}" data-bs-dismiss="modal" onclick="marcarComoVisto()">
+                            Entendido, cerrar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function() {
+                const comunicadoId = "{{ comunicado_global.id }}";
+                const storageKey = 'comunicado_visto_' + comunicadoId;
+
+                // Verificamos si ya existe la marca en el navegador
+                if (!localStorage.getItem(storageKey)) {
+                    // Si NO existe, mostramos el modal
+                    var myModal = new bootstrap.Modal(document.getElementById('modalComunicado'));
+                    myModal.show();
+                }
+            });
+
+            function marcarComoVisto() {
+                // Guardamos en el navegador que este ID ya fue visto
+                const comunicadoId = "{{ comunicado_global.id }}";
+                localStorage.setItem('comunicado_visto_' + comunicadoId, 'true');
+            }
+        </script>
+    {% endif %}
+
 </body>
 </html>
