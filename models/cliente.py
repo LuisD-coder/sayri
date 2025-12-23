@@ -15,12 +15,18 @@ class Cliente(db.Model):
     numero_cuenta = db.Column(db.String(50))
     fecha_registro = db.Column(db.DateTime, default=datetime.utcnow)
 
+    # --- NUEVOS CAMPOS DE CONTACTO Y UBICACIÓN ---
+    email = db.Column(db.String(120), nullable=True)
+    direccion = db.Column(db.String(255), nullable=True)
+    referencia = db.Column(db.String(255), nullable=True)
+    latitud = db.Column(db.String(50), nullable=True)
+    longitud = db.Column(db.String(50), nullable=True)
+    # ---------------------------------------------
+
     grupo_id = db.Column(db.Integer, db.ForeignKey('grupo.id'), nullable=True)
 
     # Relaciones
-    # --- Agrega esta línea para completar la relación con el modelo Pago ---
     pagos = relationship('Pago', back_populates='cliente')
-    # ----------------------------------------------------------------------
     prestamos_individuales = db.relationship('PrestamoIndividual', backref='cliente', lazy=True)
     contratos = relationship('Contrato', back_populates='cliente', lazy=True)
 

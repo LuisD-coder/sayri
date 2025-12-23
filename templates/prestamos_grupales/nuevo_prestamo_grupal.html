@@ -10,8 +10,16 @@
         <div class="mb-4">
             <label for="grupo_id" class="form-label">Seleccionar Grupo:</label>
             <select name="grupo_id" class="form-select" required>
+                {% if not preselected_grupo_id %}
+                    <option value="" disabled selected>-- Selecciona un grupo --</option>
+                {% endif %}
+
                 {% for grupo in grupos %}
-                    <option value="{{ grupo.id }}">{{ grupo.nombre }}</option>
+                    <option value="{{ grupo.id }}" 
+                        {# 🚀 LÓGICA DE PRE-SELECCIÓN #}
+                        {% if preselected_grupo_id and preselected_grupo_id == grupo.id %}selected{% endif %}>
+                        {{ grupo.nombre }}
+                    </option>
                 {% endfor %}
             </select>
         </div>

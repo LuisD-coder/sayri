@@ -57,17 +57,23 @@ def create_app():
     # Esto busca si hay un mensaje activo y lo envía a TODAS las plantillas (base.html)
     @app.context_processor
     def inject_comunicado_global():
-        # Solo buscamos si el usuario está logueado (opcional, ahorra consultas)
-        # o si quieres que se vea en el login, quita el 'if current_user'.
-        comunicado = None
-        try:
-            # Buscamos el comunicado activo más reciente
-            comunicado = Comunicado.query.filter_by(activo=True).order_by(Comunicado.fecha_creacion.desc()).first()
-        except Exception:
-            # Evita errores si la tabla aún no existe (durante migraciones)
-            pass
+        comunicado_a_mostrar = None
+        
+        # Solo procesamos si hay usuario logueado
+        if current_user.is_authenticated:
+            try:
+                # 1. Buscamos TODOS los comunicados activos
+                activos = Comunicado.query.filter_by(activo=True).order_by(Comunicado.fecha_creacion.desc()).all()
+                
+                # 2. Buscamos el primero que este usuario NO haya visto
+                for c in activos:
+                    if current_user not in c.usuarios_vistos:
+                        comunicado_a_mostrar = c
+                        break # Encontramos uno, dejamos de buscar
+            except Exception:
+                pass
             
-        return dict(comunicado_global=comunicado)
+        return dict(comunicado_global=comunicado_a_mostrar)
 
 
     # Ruta principal

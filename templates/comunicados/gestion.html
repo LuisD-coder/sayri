@@ -39,8 +39,7 @@
                 <tr>
                     <th>Estado</th>
                     <th>Título / Mensaje</th>
-                    <th>Fecha</th>
-                    <th>Acciones</th>
+                    <th>Alcance</th> <th>Acciones</th>
                 </tr>
             </thead>
             <tbody>
@@ -55,26 +54,92 @@
                     </td>
                     <td>
                         <strong>{{ c.titulo }}</strong> <span class="badge bg-{{ c.tipo }}">{{ c.tipo }}</span>
-                        <p class="small text-muted mb-0">{{ c.mensaje }}</p>
+                        <p class="small text-muted mb-0 text-truncate" style="max-width: 300px;">{{ c.mensaje }}</p>
+                        <small class="text-muted">{{ c.fecha_creacion.strftime('%d/%m/%Y %H:%M') }}</small>
                     </td>
-                    <td>{{ c.fecha_creacion.strftime('%d/%m/%Y %H:%M') }}</td>
+                    <td>
+                        {% set vistos = c.usuarios_vistos|length %}
+                        {% set total = todos_usuarios|length %}
+                        {% set porcentaje = (vistos / total * 100)|round|int if total > 0 else 0 %}
+                        
+                        <div class="d-flex align-items-center">
+                            <div class="progress flex-grow-1 me-2" style="height: 10px;">
+                                <div class="progress-bar bg-info" role="progressbar" style="width: {{ porcentaje }}%"></div>
+                            </div>
+                            <small>{{ vistos }}/{{ total }}</small>
+                        </div>
+                        
+                        <button class="btn btn-link btn-sm p-0 text-decoration-none" data-bs-toggle="modal" data-bs-target="#detalleModal{{ c.id }}">
+                            Ver detalle
+                        </button>
+
+                        <div class="modal fade" id="detalleModal{{ c.id }}" tabindex="-1" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-scrollable">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Lecturas: {{ c.titulo }}</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <ul class="nav nav-tabs mb-3" id="tab{{ c.id }}" role="tablist">
+                                            <li class="nav-item">
+                                                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#vistos{{ c.id }}">
+                                                    ✅ Visto por ({{ vistos }})
+                                                </button>
+                                            </li>
+                                            <li class="nav-item">
+                                                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#novistos{{ c.id }}">
+                                                    ❌ Pendientes
+                                                </button>
+                                            </li>
+                                        </ul>
+                                        
+                                        <div class="tab-content">
+                                            <div class="tab-pane fade show active" id="vistos{{ c.id }}">
+                                                <ul class="list-group list-group-flush">
+                                                    {% for u in c.usuarios_vistos %}
+                                                        <li class="list-group-item">
+                                                            <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                                            {{ u.nombre }} {{ u.apellido }}
+                                                        </li>
+                                                    {% else %}
+                                                        <li class="list-group-item text-muted">Nadie lo ha visto aún.</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                            
+                                            <div class="tab-pane fade" id="novistos{{ c.id }}">
+                                                <ul class="list-group list-group-flush">
+                                                    {% for u in todos_usuarios %}
+                                                        {# Truco ninja: verificar si NO está en la lista de vistos #}
+                                                        {% if u not in c.usuarios_vistos %}
+                                                            <li class="list-group-item">
+                                                                <i class="bi bi-hourglass-split text-warning me-2"></i>
+                                                                {{ u.nombre }} {{ u.apellido }}
+                                                            </li>
+                                                        {% endif %}
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
                     <td>
                         <div class="d-flex gap-2">
                             <form action="{{ url_for('comunicados.cambiar_estado', id=c.id) }}" method="POST">
-                                <button class="btn btn-sm btn-outline-dark" title="Cambiar estado">
-                                    <i class="bi bi-power"></i>
-                                </button>
+                                <button class="btn btn-sm btn-outline-dark" title="Cambiar estado"><i class="bi bi-power"></i></button>
                             </form>
-                            <form action="{{ url_for('comunicados.eliminar', id=c.id) }}" method="POST" onsubmit="return confirm('¿Eliminar permanentemente?');">
-                                <button class="btn btn-sm btn-outline-danger" title="Eliminar">
-                                    <i class="bi bi-trash"></i>
-                                </button>
+                            <form action="{{ url_for('comunicados.eliminar', id=c.id) }}" method="POST" onsubmit="return confirm('¿Eliminar?');">
+                                <button class="btn btn-sm btn-outline-danger" title="Eliminar"><i class="bi bi-trash"></i></button>
                             </form>
                         </div>
                     </td>
                 </tr>
                 {% else %}
-                <tr><td colspan="4" class="text-center">No hay comunicados creados.</td></tr>
+                <tr><td colspan="4" class="text-center">No hay comunicados.</td></tr>
                 {% endfor %}
             </tbody>
         </table>

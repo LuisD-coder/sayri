@@ -13,7 +13,7 @@ from openpyxl import Workbook
 from io import BytesIO
 from flask import send_file, make_response
 from sqlalchemy import func
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import aliased, joinedload
 
 reportes_bp = Blueprint('reportes', __name__, url_prefix='/reportes')
 
@@ -224,15 +224,18 @@ def pagos_proximos():
 @reportes_bp.route('/exportar_informe_grupos')
 @login_required
 def exportar_informe_grupos():
-    # 1. Preparar la consulta para obtener los datos de los grupos
-    grupos = Grupo.query.all()
+    # 1. OPTIMIZACIÓN: Cargar todo de una sola vez (Eager Loading)
+    # Esto evita cientos de consultas a la BD y hace que el excel se genere rápido
+    grupos = Grupo.query.options(
+        joinedload(Grupo.clientes),
+        joinedload(Grupo.prestamos_grupales)
+    ).all()
     
-    # 2. Crear el libro de Excel en memoria
+    # 2. Crear Excel en memoria
     wb = Workbook()
     ws = wb.active
     ws.title = "Informe de Grupos"
 
-    # Encabezados de las columnas
     headers = [
         'ID del Grupo', 'Nombre del Grupo', 'Nombres del Cliente', 'Apellidos del Cliente', 'DNI',
         'Cuota del Cliente', 'N° de Préstamos Grupales', 'N° de Miembros del Grupo',
@@ -240,41 +243,36 @@ def exportar_informe_grupos():
     ]
     ws.append(headers)
 
-    # Iterar sobre cada grupo para obtener los datos
     for grupo in grupos:
-        # Consulta para obtener el último préstamo grupal del grupo actual
-        ultimo_prestamo_grupal = PrestamoGrupal.query.filter_by(
-            grupo_id=grupo.id
-        ).order_by(PrestamoGrupal.fecha_desembolso.desc()).first()
+        # Lógica en Python (Rápida)
+        prestamos_del_grupo = sorted(grupo.prestamos_grupales, key=lambda x: x.fecha_desembolso, reverse=True)
+        ultimo_prestamo_grupal = prestamos_del_grupo[0] if prestamos_del_grupo else None
+        
+        num_miembros = len(grupo.clientes)
 
-        # Consulta para obtener el número de miembros del grupo
-        num_miembros = db.session.query(func.count(Cliente.id)).filter_by(grupo_id=grupo.id).scalar()
-
-        # Iterar sobre cada cliente del grupo
         for cliente in grupo.clientes:
-            # Obtener el último préstamo individual del cliente dentro del último préstamo grupal
             cuota_cliente = 0
             if ultimo_prestamo_grupal:
-                ultimo_prestamo_individual = PrestamoIndividual.query.filter_by(
-                    cliente_id=cliente.id,
+                # Buscamos el préstamo individual específico
+                prestamo_ind = PrestamoIndividual.query.filter_by(
+                    cliente_id=cliente.id, 
                     prestamo_grupal_id=ultimo_prestamo_grupal.id
                 ).first()
-                if ultimo_prestamo_individual:
-                    # Usar el método que ya tienes en el modelo PrestamoIndividual
-                    cuota_cliente = ultimo_prestamo_individual.obtener_numero_cuota()
+                
+                if prestamo_ind:
+                    cuota_cliente = prestamo_ind.obtener_numero_cuota()
 
-            # Obtener el número de préstamos grupales del cliente
+            # Contar préstamos totales
             num_prestamos_grupales_cliente = PrestamoGrupal.query \
                 .join(PrestamoIndividual) \
                 .filter(PrestamoIndividual.cliente_id == cliente.id).count()
 
-            # Obtener la fecha del último pago del cliente
-            fecha_ultima_cuota = None
+            # Último pago
+            fecha_ultima_cuota = ""
             ultimo_pago = Pago.query.filter_by(cliente_id=cliente.id).order_by(Pago.fecha_pago.desc()).first()
             if ultimo_pago:
                 fecha_ultima_cuota = ultimo_pago.fecha_pago.strftime('%Y-%m-%d')
 
-            # Añadir una nueva fila al archivo Excel
             ws.append([
                 grupo.id,
                 grupo.nombre,
@@ -288,17 +286,18 @@ def exportar_informe_grupos():
                 fecha_ultima_cuota
             ])
 
-    # 3. Preparar el archivo para el envío
+    # 3. Guardar en memoria
     excel_stream = BytesIO()
     wb.save(excel_stream)
     excel_stream.seek(0)
 
-    # 4. Enviar el archivo como respuesta
-    response = make_response(send_file(
-        excel_stream,
+    # 4. SOLUCIÓN AL ERROR DE HOSTING (io.UnsupportedOperation: fileno)
+    # En lugar de 'send_file', enviamos los bytes crudos con 'Response'.
+    # Esto evita que uWSGI/Gunicorn intente buscar un archivo físico en disco.
+    return Response(
+        excel_stream.getvalue(),
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        as_attachment=True,
-        download_name='informe_grupos.xlsx'
-    ))
-
-    return response
+        headers={
+            "Content-Disposition": "attachment;filename=informe_grupos.xlsx"
+        }
+    )

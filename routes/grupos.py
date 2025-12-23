@@ -10,17 +10,18 @@ grupos_bp = Blueprint('grupos', __name__, url_prefix='/grupos')
 @login_required
 def nuevo_grupo():
     if request.method == 'POST':
+        # ... (código de creación igual) ...
         nombre = request.form['nombre']
         nuevo_grupo = Grupo(nombre=nombre)
-        
-        # Asignar automáticamente el usuario creador al grupo
         nuevo_grupo.agregar_usuario(current_user)
         
         db.session.add(nuevo_grupo)
         db.session.commit()
         
-        flash(f'Grupo "{nombre}" creado exitosamente', 'success')
-        return redirect(url_for('grupos.lista_grupos'))
+        flash(f'Grupo "{nombre}" creado. Ahora define su préstamo.', 'success')
+        
+        # 🚀 CAMBIO CLAVE: Redirigir directo a nuevo préstamo pasando el ID del grupo nuevo
+        return redirect(url_for('prestamos_grupales.nuevo_prestamo_grupal', grupo_id=nuevo_grupo.id))
 
     return render_template('grupos/nuevo_grupo.html')
 

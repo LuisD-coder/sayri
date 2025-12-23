@@ -6,9 +6,7 @@
     <title>{% block title %}{% endblock %}</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
-
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 
     <style>
@@ -37,11 +35,13 @@
         .navbar-brand {
             letter-spacing: 1px;
             transition: transform 0.3s ease, color 0.3s ease;
+            display: flex;
+            align-items: center; /* Alineación vertical perfecta */
         }
 
         .navbar-brand:hover {
             color: #ffc107 !important;
-            transform: scale(1.05);
+            transform: scale(1.02);
         }
 
         /* Links */
@@ -105,6 +105,14 @@
                 width: 100%;
                 padding: 0.75rem;
             }
+            
+            .navbar-collapse {
+                background-color: rgba(0,0,0,0.95);
+                border-radius: 12px;
+                padding: 1rem;
+                margin-top: 10px;
+                border: 1px solid #333;
+            }
         }
 
         main.container {
@@ -132,15 +140,6 @@
         header {
             animation: fadeInDown 0.7s ease-out;
         }
-
-        /* Responsive */
-        @media (max-width: 991px) {
-            .navbar-collapse {
-                background-color: rgba(0,0,0,0.85);
-                border-radius: 12px;
-                padding: 1rem;
-            }
-        }
     </style>
 </head>
 
@@ -149,10 +148,18 @@
     <div class="container-fluid">
         <a class="navbar-brand fw-bold fs-4 text-uppercase text-light tracking-wide" href="/">
             <i class="bi bi-bank2 text-warning me-2"></i> MicroCréditos Sayri
+            
+            {% if current_user.is_authenticated %}
+                <span class="ms-2 text-secondary fs-6 fw-normal text-lowercase border-start border-secondary ps-2 d-none d-sm-inline-block">
+                    <i class="bi bi-person-fill"></i> {{ current_user.email.split('@')[0] }}
+                </span>
+            {% endif %}
         </a>
+
         <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
             <span class="navbar-toggler-icon"></span>
         </button>
+        
         <div class="collapse navbar-collapse justify-content-end mt-3 mt-lg-0" id="navbarNav">
             <ul class="navbar-nav align-items-lg-center gap-2">
                 <li class="nav-item">
@@ -294,24 +301,29 @@
         </div>
 
         <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                const comunicadoId = "{{ comunicado_global.id }}";
-                const storageKey = 'comunicado_visto_' + comunicadoId;
+        document.addEventListener('DOMContentLoaded', function() {
+            // Como el backend ya filtró si lo vimos o no, si 'comunicado_global' existe,
+            // significa que NO lo hemos visto. Lo mostramos directamente.
+            var myModal = new bootstrap.Modal(document.getElementById('modalComunicado'));
+            myModal.show();
+        });
 
-                // Verificamos si ya existe la marca en el navegador
-                if (!localStorage.getItem(storageKey)) {
-                    // Si NO existe, mostramos el modal
-                    var myModal = new bootstrap.Modal(document.getElementById('modalComunicado'));
-                    myModal.show();
+        function marcarComoVisto() {
+            const comunicadoId = "{{ comunicado_global.id }}";
+            
+            // Llamada AJAX al servidor para registrar la lectura
+            fetch(`/comunicados/marcar_visto/${comunicadoId}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
                 }
+            }).then(response => {
+                console.log("Lectura registrada en base de datos");
+            }).catch(error => {
+                console.error("Error al registrar lectura:", error);
             });
-
-            function marcarComoVisto() {
-                // Guardamos en el navegador que este ID ya fue visto
-                const comunicadoId = "{{ comunicado_global.id }}";
-                localStorage.setItem('comunicado_visto_' + comunicadoId, 'true');
-            }
-        </script>
+        }
+    </script>
     {% endif %}
 
 </body>

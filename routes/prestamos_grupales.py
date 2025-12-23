@@ -14,17 +14,21 @@ from unidecode import unidecode
 
 prestamos_grupales_bp = Blueprint('prestamos_grupales', __name__, url_prefix='/prestamos_grupales')
 
-# --- HELPER: Obtener grupos permitidos para selectores ---
 def obtener_grupos_permitidos():
-    """Devuelve la query de grupos según el rol del usuario"""
+    """Devuelve la lista de grupos según el rol del usuario"""
     if current_user.rol.nombre == 'admin':
         return Grupo.query.all()
     else:
-        return current_user.grupos_asignados.all()
+        # ✅ CORREGIDO: Usamos .grupos en lugar de .grupos_asignados.all()
+        # Como quitamos lazy='dynamic' en el modelo, esto ya devuelve una lista.
+        return current_user.grupos
 
 @prestamos_grupales_bp.route('/nuevo', methods=['GET', 'POST'])
 @login_required
 def nuevo_prestamo_grupal():
+    # 🚀 NUEVO: Capturar si viene un grupo pre-seleccionado desde la URL (query string)
+    preselected_grupo_id = request.args.get('grupo_id', type=int)
+
     if request.method == 'POST':
         grupo_id = request.form['grupo_id']
         fecha_desembolso_str = request.form['fecha_desembolso']
@@ -55,7 +59,11 @@ def nuevo_prestamo_grupal():
 
     # ✅ SEGURIDAD: Mostrar solo grupos permitidos
     grupos = obtener_grupos_permitidos()
-    return render_template('prestamos_grupales/nuevo_prestamo_grupal.html', grupos=grupos)
+    
+    # 🚀 NUEVO: Pasamos 'preselected_grupo_id' a la vista
+    return render_template('prestamos_grupales/nuevo_prestamo_grupal.html', 
+                           grupos=grupos, 
+                           preselected_grupo_id=preselected_grupo_id)
 
 
 @prestamos_grupales_bp.route('/', methods=['GET'])
@@ -63,7 +71,7 @@ def nuevo_prestamo_grupal():
 def lista_prestamos_grupales():
     grupo_id = request.args.get('grupo_id', type=int)
 
-    # ✅ SEGURIDAD: Lista de grupos permitidos para el filtro
+    # ✅ SEGURIDAD: Lista de grupos permitidos para el filtro (buscador)
     grupos = obtener_grupos_permitidos()
 
     prestamos_grupales = []
@@ -80,13 +88,10 @@ def lista_prestamos_grupales():
         prestamos_grupales = PrestamoGrupal.query.filter_by(grupo_id=grupo_id)\
             .order_by(PrestamoGrupal.fecha_desembolso.desc()).all()
     else:
-        # Si no selecciona ninguno, mostrar los de sus grupos asignados (o vacío si prefieres)
-        mis_grupos_ids = [g.id for g in grupos]
-        if mis_grupos_ids:
-             prestamos_grupales = PrestamoGrupal.query.filter(PrestamoGrupal.grupo_id.in_(mis_grupos_ids))\
-                .order_by(PrestamoGrupal.fecha_desembolso.desc()).all()
-        else:
-             prestamos_grupales = []
+        # ⚡ OPTIMIZACIÓN: Estado inicial limpio
+        # No cargamos nada hasta que el usuario busque un grupo específico.
+        # Esto hace la carga de la página instantánea.
+        prestamos_grupales = []
 
     return render_template('prestamos_grupales/lista_prestamos_grupales.html',
                            prestamos_grupales=prestamos_grupales,

@@ -14,12 +14,25 @@ pagos_bp = Blueprint('pagos', __name__)
 MORA_POR_DIA = Decimal('7.50')  # S/7.50 por cada día de atraso
 
 # ----------------------------------------------------------------------
+# HELPER: Obtener grupos permitidos (SEGURIDAD)
+# ----------------------------------------------------------------------
+def obtener_grupos_permitidos():
+    """Devuelve la query de grupos según el rol del usuario"""
+    if current_user.rol.nombre == 'admin':
+        return Grupo.query.all()
+    else:
+        # ✅ CORREGIDO: Usar .grupos en lugar de .grupos_asignados.all()
+        return current_user.grupos
+
+# ----------------------------------------------------------------------
 # RUTA DE LISTADO DE PAGOS
 # ----------------------------------------------------------------------
 @pagos_bp.route('/pagos', methods=['GET'])
 @login_required
 def lista_pagos():
-    grupos = Grupo.query.all()
+    # ✅ CAMBIO 1: Filtrar grupos según el usuario
+    grupos = obtener_grupos_permitidos()
+    
     grupo_id = request.args.get('grupo_id')
 
     selected_grupo = None
@@ -27,7 +40,13 @@ def lista_pagos():
 
     if grupo_id:
         selected_grupo = Grupo.query.get(grupo_id)
+        
+        # ✅ CAMBIO 2: Verificar seguridad si intenta acceder por URL directa
         if selected_grupo:
+            if not selected_grupo.tiene_acceso(current_user):
+                flash('No tienes permiso para ver los pagos de este grupo.', 'danger')
+                return redirect(url_for('pagos.lista_pagos'))
+
             # Obtener solo el préstamo grupal más actual
             prestamo_grupal_reciente = PrestamoGrupal.query \
                 .filter_by(grupo_id=selected_grupo.id) \
@@ -63,6 +82,12 @@ def guardar_pagos():
         grupo_id = request.args.get('grupo_id')
         if not grupo_id:
             flash('Error: ID de grupo no especificado.', 'error')
+            return redirect(url_for('pagos.lista_pagos'))
+
+        # ✅ CAMBIO 3: Verificar que el usuario tenga permiso para escribir en este grupo
+        grupo_verificacion = Grupo.query.get(grupo_id)
+        if not grupo_verificacion or not grupo_verificacion.tiene_acceso(current_user):
+            flash('Acceso denegado: No puedes registrar pagos en este grupo.', 'error')
             return redirect(url_for('pagos.lista_pagos'))
 
         # Obtener el préstamo grupal más reciente para el grupo seleccionado
